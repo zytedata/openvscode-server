@@ -35,6 +35,8 @@ import { Schemas } from 'vs/base/common/network';
 import { URI } from 'vs/base/common/uri';
 import { isWindows } from 'vs/base/common/platform';
 import { withNullAsUndefined } from 'vs/base/common/types';
+import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
+import { TerminalEditorInput } from 'vs/workbench/contrib/terminal/browser/editor/terminalEditorInput';
 
 export const TERMINAL_PICKER_PREFIX = 'term ';
 
@@ -1382,5 +1384,26 @@ export class FindPrevious extends Action {
 	public run(): Promise<any> {
 		this.terminalService.findPrevious();
 		return Promise.resolve(undefined);
+	}
+}
+
+export class TerminalEditorAction extends Action {
+
+	public static readonly ID = 'workbench.action.createTerminalEditor';
+	public static readonly LABEL = nls.localize('editorTerminal', "Create Terminal Editor");
+
+	constructor(
+		id: string,
+		label: string,
+		@IEditorService private readonly editorService: IEditorService,
+		@IInstantiationService private readonly instantiationService: IInstantiationService
+	) {
+		super(id, label);
+	}
+
+	public async run(): Promise<void> {
+		const input = this.instantiationService.createInstance(TerminalEditorInput);
+		await this.editorService.openEditor(input, { pinned: true });
+		return void (0);
 	}
 }

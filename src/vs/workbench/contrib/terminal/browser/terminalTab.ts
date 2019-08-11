@@ -5,7 +5,6 @@
 import * as aria from 'vs/base/browser/ui/aria/aria';
 import * as nls from 'vs/nls';
 import { ITerminalInstance, IShellLaunchConfig, ITerminalTab, Direction, ITerminalService, ITerminalConfigHelper } from 'vs/workbench/contrib/terminal/common/terminal';
-import { IContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { Event, Emitter } from 'vs/base/common/event';
 import { IDisposable, Disposable, DisposableStore } from 'vs/base/common/lifecycle';
 import { SplitView, Orientation, IView, Sizing } from 'vs/base/browser/ui/splitview/splitview';
@@ -226,7 +225,6 @@ export class TerminalTab extends Disposable implements ITerminalTab {
 	public readonly onInstancesChanged: Event<void> = this._onInstancesChanged.event;
 
 	constructor(
-		terminalFocusContextKey: IContextKey<boolean>,
 		configHelper: ITerminalConfigHelper,
 		private _container: HTMLElement | undefined,
 		shellLaunchConfigOrInstance: IShellLaunchConfig | ITerminalInstance,
@@ -240,11 +238,7 @@ export class TerminalTab extends Disposable implements ITerminalTab {
 		if ('id' in shellLaunchConfigOrInstance) {
 			instance = shellLaunchConfigOrInstance;
 		} else {
-			instance = this._terminalService.createInstance(
-				terminalFocusContextKey,
-				configHelper,
-				undefined,
-				shellLaunchConfigOrInstance);
+			instance = this._terminalService.createInstance(undefined, shellLaunchConfigOrInstance);
 		}
 		this._terminalInstances.push(instance);
 		this._initInstanceListeners(instance);
@@ -374,7 +368,6 @@ export class TerminalTab extends Disposable implements ITerminalTab {
 	}
 
 	public split(
-		terminalFocusContextKey: IContextKey<boolean>,
 		configHelper: ITerminalConfigHelper,
 		shellLaunchConfig: IShellLaunchConfig
 	): ITerminalInstance | undefined {
@@ -385,11 +378,7 @@ export class TerminalTab extends Disposable implements ITerminalTab {
 		if (newTerminalSize < TERMINAL_MIN_USEFUL_SIZE) {
 			return undefined;
 		}
-		const instance = this._terminalService.createInstance(
-			terminalFocusContextKey,
-			configHelper,
-			undefined,
-			shellLaunchConfig);
+		const instance = this._terminalService.createInstance(undefined, shellLaunchConfig);
 		this._terminalInstances.splice(this._activeInstanceIndex + 1, 0, instance);
 		this._initInstanceListeners(instance);
 		this._setActiveInstance(instance);

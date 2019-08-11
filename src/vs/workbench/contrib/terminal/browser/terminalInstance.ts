@@ -422,9 +422,9 @@ export class TerminalInstance extends Disposable implements ITerminalInstance {
 		}
 
 		const wrapperElementStyle = getComputedStyle(this._wrapperElement);
-		const marginLeft = parseInt(wrapperElementStyle.marginLeft!.split('px')[0], 10);
-		const marginRight = parseInt(wrapperElementStyle.marginRight!.split('px')[0], 10);
-		const bottom = parseInt(wrapperElementStyle.bottom!.split('px')[0], 10);
+		const marginLeft = parseInt(wrapperElementStyle.marginLeft!.split('px')[0]) || 0;
+		const marginRight = parseInt(wrapperElementStyle.marginRight!.split('px')[0]) || 0;
+		const bottom = parseInt(wrapperElementStyle.bottom!.split('px')[0]) || 0;
 
 		const innerWidth = width - marginLeft - marginRight;
 		const innerHeight = height - bottom;
@@ -1302,6 +1302,7 @@ export class TerminalInstance extends Disposable implements ITerminalInstance {
 
 	@debounce(50)
 	private _resize(): void {
+		console.log('_resize', this.cols, this.rows);
 		let cols = this.cols;
 		let rows = this.rows;
 
