@@ -27,6 +27,7 @@ function getUnixShellEnvironment(logService: ILogService): Promise<typeof proces
 		});
 
 		const command = `'${process.execPath}' -p '"${mark}" + JSON.stringify(process.env) + "${mark}"'`;
+		logService.trace('getUnixShellEnvironment#shell', process.env.SHELL);
 		logService.trace('getUnixShellEnvironment#env', env);
 		logService.trace('getUnixShellEnvironment#spawn', command);
 
