@@ -25,7 +25,7 @@ export enum LogLevel {
 	Off
 }
 
-export const DEFAULT_LOG_LEVEL: LogLevel = LogLevel.Info;
+export const DEFAULT_LOG_LEVEL: LogLevel = LogLevel.Trace;
 
 export interface ILogService extends IDisposable {
 	_serviceBrand: undefined;
