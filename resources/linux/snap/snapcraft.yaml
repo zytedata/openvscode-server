@@ -17,12 +17,6 @@ parts:
     override-pull: |
       add-apt-repository -y ppa:ubuntu-desktop/gnome-3-26
       apt -y update
-    override-build: |
-      snapcraftctl build
-      mkdir -p $SNAPCRAFT_PART_INSTALL/meta/gui
-      sed 's|^Icon=|Icon=${SNAP}|;s|^Exec=/usr/share/code-insiders/code-insiders|Exec=code-insiders|' \
-        $SNAPCRAFT_PART_INSTALL/usr/share/applications/code-insiders.desktop \
-        > $SNAPCRAFT_PART_INSTALL/meta/gui/code-insiders.desktop
 
   code:
     after:
@@ -52,6 +46,12 @@ parts:
       - -usr/share/icons
       - -usr/share/lintian
       - -usr/share/man
+    override-build: |
+      snapcraftctl build
+      mkdir -p $SNAPCRAFT_PART_INSTALL/meta/gui
+      sed 's|^Icon=|Icon=${SNAP}|;s|^Exec=/usr/share/code-insiders/code-insiders|Exec=code-insiders|' \
+        $SNAPCRAFT_PART_INSTALL/usr/share/applications/code-insiders.desktop \
+        > $SNAPCRAFT_PART_INSTALL/meta/gui/code-insiders.desktop
 
 apps:
   @@NAME@@:
