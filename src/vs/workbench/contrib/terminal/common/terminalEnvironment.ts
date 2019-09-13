@@ -7,7 +7,7 @@ import * as path from 'vs/base/common/path';
 import * as platform from 'vs/base/common/platform';
 import { URI as Uri } from 'vs/base/common/uri';
 import { IWorkspaceFolder } from 'vs/platform/workspace/common/workspace';
-import { IShellLaunchConfig, ITerminalEnvironment } from 'vs/workbench/contrib/terminal/common/terminal';
+import { IShellLaunchConfig, ITerminalEnvironment, DetectLocale } from 'vs/workbench/contrib/terminal/common/terminal';
 import { IConfigurationResolverService } from 'vs/workbench/services/configurationResolver/common/configurationResolver';
 import { sanitizeProcessEnvironment } from 'vs/base/common/processes';
 import { ILogService } from 'vs/platform/log/common/log';
@@ -51,7 +51,7 @@ function _mergeEnvironmentValue(env: ITerminalEnvironment, key: string, value: s
 	}
 }
 
-export function addTerminalEnvironmentKeys(env: platform.IProcessEnvironment, version: string | undefined, locale: string | undefined, detectLocale: 'auto' | 'off' | 'on'): void {
+export function addTerminalEnvironmentKeys(env: platform.IProcessEnvironment, version: string | undefined, locale: string | undefined, detectLocale: DetectLocale): void {
 	env['TERM_PROGRAM'] = 'vscode';
 	if (version) {
 		env['TERM_PROGRAM_VERSION'] = version;
@@ -88,7 +88,7 @@ function resolveConfigurationVariables(configurationResolverService: IConfigurat
 	return env;
 }
 
-export function shouldSetLangEnvVariable(env: platform.IProcessEnvironment, detectLocale: 'auto' | 'off' | 'on'): boolean {
+export function shouldSetLangEnvVariable(env: platform.IProcessEnvironment, detectLocale: DetectLocale): boolean {
 	if (detectLocale === 'on') {
 		return true;
 	}
@@ -344,7 +344,7 @@ export function createTerminalEnvironment(
 	configurationResolverService: IConfigurationResolverService | undefined,
 	isWorkspaceShellAllowed: boolean,
 	version: string | undefined,
-	detectLocale: 'auto' | 'off' | 'on',
+	detectLocale: DetectLocale,
 	baseEnv: platform.IProcessEnvironment
 ): platform.IProcessEnvironment {
 	// Create a terminal environment based on settings, launch config and permissions

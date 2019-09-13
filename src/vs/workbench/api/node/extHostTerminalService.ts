@@ -12,7 +12,7 @@ import * as terminalEnvironment from 'vs/workbench/contrib/terminal/common/termi
 import { IShellLaunchConfigDto, IShellDefinitionDto, IShellAndArgsDto } from 'vs/workbench/api/common/extHost.protocol';
 import { ExtHostConfiguration, ExtHostConfigProvider, IExtHostConfiguration } from 'vs/workbench/api/common/extHostConfiguration';
 import { ILogService } from 'vs/platform/log/common/log';
-import { IShellLaunchConfig, ITerminalEnvironment } from 'vs/workbench/contrib/terminal/common/terminal';
+import { IShellLaunchConfig, ITerminalEnvironment, DetectLocale } from 'vs/workbench/contrib/terminal/common/terminal';
 import { TerminalProcess } from 'vs/workbench/contrib/terminal/node/terminalProcess';
 import { ExtHostWorkspace, IExtHostWorkspace } from 'vs/workbench/api/common/extHostWorkspace';
 import { IWorkspaceFolder } from 'vs/platform/workspace/common/workspace';
@@ -182,7 +182,7 @@ export class ExtHostTerminalService extends BaseExtHostTerminalService {
 			this._variableResolver,
 			isWorkspaceShellAllowed,
 			pkg.version,
-			terminalConfig.get<'auto' | 'off' | 'on'>('detectLocale', 'auto'),
+			terminalConfig.get<DetectLocale>('detectLocale', 'auto'),
 			baseEnv
 		);
 
