@@ -6,11 +6,20 @@ resources:
   - container: snapcraft
     image: snapcore/snapcraft:stable
 
+variables:
+  VSCODE_QUALITY: exploration
+
 jobs:
+- job: SyncExploration
+  steps:
+  - template: exploration-build.yml
+
 - job: Compile
   pool:
     vmImage: 'Ubuntu-16.04'
   container: vscode-x64
+  dependsOn:
+  - SyncExploration
   steps:
   - template: product-compile.yml
 
@@ -143,8 +152,8 @@ trigger: none
 pr: none
 
 schedules:
-- cron: "0 5 * * Mon-Fri"
-  displayName: Mon-Fri at 7:00
+- cron: "0 6 * * Mon-Fri"
+  displayName: Mon-Fri at 8:00
   branches:
     include:
-    - master
+    - electron-7.0.x

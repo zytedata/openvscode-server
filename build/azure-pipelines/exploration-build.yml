@@ -1,9 +1,3 @@
-pool:
-  vmImage: 'Ubuntu-16.04'
-
-trigger: none
-pr: none
-
 steps:
 - task: NodeTool@0
   inputs:
@@ -27,10 +21,14 @@ steps:
     git config user.email "vscode@microsoft.com"
     git config user.name "VSCode"
 
-    git checkout origin/electron-6.0.x
+    git checkout origin/electron-7.0.x
     git merge origin/master
 
     # Push master branch into exploration branch
-    git push origin HEAD:electron-6.0.x
+    git push origin HEAD:electron-7.0.x
+
+    # Merge exploration branch into build branch
+    git checkout origin/electron-build-next
+    git merge origin/electron-7.0.x
 
   displayName: Sync & Merge Exploration
