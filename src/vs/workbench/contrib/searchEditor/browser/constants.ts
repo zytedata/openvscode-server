@@ -17,3 +17,27 @@ export const EnableSearchEditorPreview = new RawContextKey<boolean>('previewSear
 export const InSearchEditor = new RawContextKey<boolean>('inSearchEditor', false);
 
 export const SearchEditorScheme = 'search-editor';
+
+export type SearchConfiguration = {
+	query: string,
+	includes: string,
+	excludes: string
+	contextLines: number,
+	wholeWord: boolean,
+	caseSensitive: boolean,
+	regexp: boolean,
+	useIgnores: boolean,
+	showIncludesExcludes: boolean,
+};
+
+export const DEFAULT_SEARCH_CONFIG: Readonly<SearchConfiguration> = {
+	query: '',
+	includes: '',
+	excludes: '',
+	contextLines: 0,
+	wholeWord: false,
+	caseSensitive: false,
+	regexp: false,
+	useIgnores: true,
+	showIncludesExcludes: false,
+};

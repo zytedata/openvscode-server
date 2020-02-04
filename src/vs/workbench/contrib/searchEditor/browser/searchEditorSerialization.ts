@@ -12,7 +12,7 @@ import { FileMatch, Match, searchMatchComparer, SearchResult } from 'vs/workbenc
 import { ITextQuery } from 'vs/workbench/services/search/common/search';
 import { localize } from 'vs/nls';
 import type { ITextModel } from 'vs/editor/common/model';
-import type { SearchConfiguration } from 'vs/workbench/contrib/searchEditor/browser/searchEditorInput';
+import { SearchConfiguration, DEFAULT_SEARCH_CONFIG } from 'vs/workbench/contrib/searchEditor/browser/searchEditorInput';
 
 // Using \r\n on Windows inserts an extra newline between results.
 const lineDelimiter = '\n';
@@ -146,17 +146,7 @@ export const extractSearchQuery = (model: ITextModel | string): SearchConfigurat
 		? model
 		: model.getValueInRange(new Range(1, 1, 6, 1)).split(lineDelimiter);
 
-	const query: SearchConfiguration = {
-		query: '',
-		includes: '',
-		excludes: '',
-		regexp: false,
-		caseSensitive: false,
-		useIgnores: true,
-		wholeWord: false,
-		contextLines: 0,
-		showIncludesExcludes: false,
-	};
+	const query: SearchConfiguration = { ...DEFAULT_SEARCH_CONFIG };
 
 	const unescapeNewlines = (str: string) => {
 		let out = '';

@@ -38,11 +38,11 @@ import { serializeSearchResultForEditor } from 'vs/workbench/contrib/searchEdito
 import { IContextKeyService, IContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { InputBoxFocusedKey } from 'vs/workbench/contrib/search/common/constants';
 import { IEditorProgressService, LongRunningOperation } from 'vs/platform/progress/common/progress';
-import type { SearchEditorInput, SearchConfiguration } from 'vs/workbench/contrib/searchEditor/browser/searchEditorInput';
+import type { SearchEditorInput } from 'vs/workbench/contrib/searchEditor/browser/searchEditorInput';
 import { searchEditorFindMatchBorder, searchEditorFindMatch, registerColor, inputBorder } from 'vs/platform/theme/common/colorRegistry';
 import { attachInputBoxStyler } from 'vs/platform/theme/common/styler';
 import { ReferencesController } from 'vs/editor/contrib/gotoSymbol/peek/referencesController';
-import { InSearchEditor } from 'vs/workbench/contrib/searchEditor/browser/constants';
+import { InSearchEditor, SearchConfiguration } from 'vs/workbench/contrib/searchEditor/browser/constants';
 
 const RESULT_LINE_REGEX = /^(\s+)(\d+)(:| )(\s+)(.*)$/;
 const FILE_LINE_REGEX = /^(\S.*):$/;
@@ -334,7 +334,7 @@ export class SearchEditor extends BaseEditor {
 		controller.closeWidget(false);
 
 		const labelFormatter = (uri: URI): string => this.labelService.getUriLabel(uri, { relative: true });
-		const results = serializeSearchResultForEditor(searchModel.searchResult, config.includes, config.excludes, config.contextLines, labelFormatter, true);
+		const results = serializeSearchResultForEditor(searchModel.searchResult, config.includes, config.excludes, config.contextLines, labelFormatter, false);
 		const textModel = assertIsDefined(this.searchResultEditor.getModel());
 		this.modelService.updateModel(textModel, results.text);
 		this.getInput()?.setDirty(this.getInput()?.resource.scheme !== 'search-editor');
@@ -377,7 +377,7 @@ export class SearchEditor extends BaseEditor {
 		await super.setInput(newInput, options, token);
 		this.inSearchEditorContextKey.set(true);
 
-		const { model, query } = await newInput.reloadModel();
+		const { resultsTextModel: model, searchConfig: query } = await newInput.reloadModel();
 		this.searchResultEditor.setModel(model);
 
 		this.pauseSearching = true;
