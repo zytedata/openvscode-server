@@ -36,6 +36,8 @@ function parseOpenUrl(args: ParsedArgs): URI[] {
 	if (args['open-url'] && args._urls && args._urls.length > 0) {
 		// --open-url must contain -- followed by the url(s)
 		// process.argv is used over args._ as args._ are resolved to file paths at this point
+		console.log('Launch main service # parseOpenURl' + JSON.stringify(args._urls));
+		(globalThis as any)['launchMainService#parseOpenUrl'] = args._urls;
 		return coalesce(args._urls
 			.map(url => {
 				try {

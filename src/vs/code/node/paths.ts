@@ -15,6 +15,7 @@ export function validatePaths(args: ParsedArgs): ParsedArgs {
 
 	// Track URLs if they're going to be used
 	if (args['open-url']) {
+		console.log('paths#validate', JSON.stringify(args._), JSON.stringify(args._urls));
 		args._urls = args._;
 		args._ = [];
 	}
