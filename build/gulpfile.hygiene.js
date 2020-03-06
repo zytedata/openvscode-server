@@ -103,6 +103,7 @@ const copyrightFilter = [
 	'!**/*.template',
 	'!**/*.md',
 	'!**/*.bat',
+	'!**/*.vbs',
 	'!**/*.cmd',
 	'!**/*.ico',
 	'!**/*.icns',
