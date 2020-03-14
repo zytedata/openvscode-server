@@ -78,6 +78,15 @@ export class GitHubServer {
 		return promiseFromEvent(uriHandler.event, exchangeCodeForToken(state, clientDetails));
 	}
 
+	public async installApp(): Promise<string> {
+		const clientDetails = ClientRegistrar.getGitHubAppDetails();
+		const state = uuid();
+		const uri = vscode.Uri.parse(`https://github.com/apps/microsoft-visual-studio-code/installations/new?state=${state}`);
+
+		vscode.env.openExternal(uri);
+		return promiseFromEvent(uriHandler.event, exchangeCodeForToken(state, clientDetails));
+	}
+
 	public async getUserInfo(token: string): Promise<{ id: string, accountName: string }> {
 		return new Promise((resolve, reject) => {
 			Logger.info('Getting account info...');

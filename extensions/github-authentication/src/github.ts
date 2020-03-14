@@ -101,7 +101,7 @@ export class GitHubAuthenticationProvider {
 	}
 
 	public async login(scopes: string): Promise<vscode.AuthenticationSession> {
-		const token = await this._githubServer.login(scopes);
+		const token = scopes === 'vso' ? await this._githubServer.installApp() : await this._githubServer.login(scopes);
 		const session = await this.tokenToSession(token, scopes.split(' '));
 		await this.setToken(session);
 		return session;
