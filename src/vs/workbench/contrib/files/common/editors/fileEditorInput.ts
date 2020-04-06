@@ -27,15 +27,12 @@ const enum ForceOpenAs {
 	Binary
 }
 
-/**
- * A file editor input is the input type for the file editor of file system resources.
- */
-export class FileEditorInput extends TextResourceEditorInput implements IFileEditorInput {
+export abstract class BaseFileEditorInput extends TextResourceEditorInput implements IFileEditorInput {
 
 	private preferredEncoding: string | undefined;
 	private preferredMode: string | undefined;
 
-	private forceOpenAs: ForceOpenAs = ForceOpenAs.None;
+	protected forceOpenAs: ForceOpenAs = ForceOpenAs.None;
 
 	private model: ITextFileEditorModel | undefined = undefined;
 	private cachedTextFileModelReference: IReference<ITextFileEditorModel> | undefined = undefined;
@@ -46,7 +43,7 @@ export class FileEditorInput extends TextResourceEditorInput implements IFileEdi
 		resource: URI,
 		preferredEncoding: string | undefined,
 		preferredMode: string | undefined,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService protected readonly instantiationService: IInstantiationService,
 		@ITextFileService textFileService: ITextFileService,
 		@ITextModelService private readonly textModelResolverService: ITextModelService,
 		@ILabelService labelService: ILabelService,
@@ -162,10 +159,6 @@ export class FileEditorInput extends TextResourceEditorInput implements IFileEdi
 		this.forceOpenAs = ForceOpenAs.Binary;
 	}
 
-	getTypeId(): string {
-		return FILE_EDITOR_INPUT_ID;
-	}
-
 	getName(): string {
 		return this.decorateLabel(super.getName());
 	}
@@ -216,10 +209,6 @@ export class FileEditorInput extends TextResourceEditorInput implements IFileEdi
 		// it shows up as dirty and has not finished saving yet.
 
 		return super.isSaving();
-	}
-
-	getPreferredEditorId(candidates: string[]): string {
-		return this.forceOpenAs === ForceOpenAs.Binary ? BINARY_FILE_EDITOR_ID : TEXT_FILE_EDITOR_ID;
 	}
 
 	resolve(): Promise<ITextFileEditorModel | BinaryEditorModel> {
@@ -301,18 +290,6 @@ export class FileEditorInput extends TextResourceEditorInput implements IFileEdi
 		return undefined;
 	}
 
-	matches(otherInput: unknown): boolean {
-		if (super.matches(otherInput) === true) {
-			return true;
-		}
-
-		if (otherInput) {
-			return otherInput instanceof FileEditorInput && otherInput.resource.toString() === this.resource.toString();
-		}
-
-		return false;
-	}
-
 	dispose(): void {
 
 		// Model
@@ -323,5 +300,32 @@ export class FileEditorInput extends TextResourceEditorInput implements IFileEdi
 		this.cachedTextFileModelReference = undefined;
 
 		super.dispose();
+	}
+}
+
+
+/**
+ * A file editor input is the input type for the file editor of file system resources.
+ */
+export class FileEditorInput extends BaseFileEditorInput {
+
+	getTypeId(): string {
+		return FILE_EDITOR_INPUT_ID;
+	}
+
+	getPreferredEditorId(candidates: string[]): string {
+		return this.forceOpenAs === ForceOpenAs.Binary ? BINARY_FILE_EDITOR_ID : TEXT_FILE_EDITOR_ID;
+	}
+
+	matches(otherInput: unknown): boolean {
+		if (super.matches(otherInput) === true) {
+			return true;
+		}
+
+		if (otherInput) {
+			return otherInput instanceof FileEditorInput && otherInput.resource.toString() === this.resource.toString();
+		}
+
+		return false;
 	}
 }
