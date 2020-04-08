@@ -26,7 +26,7 @@ import { ISearchConfiguration, VIEW_ID } from 'vs/workbench/services/search/comm
 import { ISearchHistoryService } from 'vs/workbench/contrib/search/common/searchHistoryService';
 import { ITreeNavigator } from 'vs/base/browser/ui/tree/tree';
 import { IViewsService } from 'vs/workbench/common/views';
-import { SearchEditorInput } from 'vs/workbench/contrib/searchEditor/browser/searchEditorInput';
+import { isSearchEditorInput } from 'vs/workbench/contrib/searchEditor/browser/searchEditorInput';
 import { SearchEditor } from 'vs/workbench/contrib/searchEditor/browser/searchEditor';
 
 export function isSearchViewFocused(viewsService: IViewsService): boolean {
@@ -94,7 +94,7 @@ export class FocusNextInputAction extends Action {
 
 	async run(): Promise<any> {
 		const input = this.editorService.activeEditor;
-		if (input instanceof SearchEditorInput) {
+		if (isSearchEditorInput(input)) {
 			// cast as we cannot import SearchEditor as a value b/c cyclic dependency.
 			(this.editorService.activeEditorPane as SearchEditor).focusNextInput();
 		}
@@ -119,7 +119,7 @@ export class FocusPreviousInputAction extends Action {
 
 	async run(): Promise<any> {
 		const input = this.editorService.activeEditor;
-		if (input instanceof SearchEditorInput) {
+		if (isSearchEditorInput(input)) {
 			// cast as we cannot import SearchEditor as a value b/c cyclic dependency.
 			(this.editorService.activeEditorPane as SearchEditor).focusPrevInput();
 		}
@@ -496,7 +496,7 @@ export class FocusNextSearchResultAction extends Action {
 
 	async run(): Promise<any> {
 		const input = this.editorService.activeEditor;
-		if (input instanceof SearchEditorInput) {
+		if (isSearchEditorInput(input)) {
 			// cast as we cannot import SearchEditor as a value b/c cyclic dependency.
 			return (this.editorService.activeEditorPane as SearchEditor).focusNextResult();
 		}
@@ -522,7 +522,7 @@ export class FocusPreviousSearchResultAction extends Action {
 
 	async run(): Promise<any> {
 		const input = this.editorService.activeEditor;
-		if (input instanceof SearchEditorInput) {
+		if (isSearchEditorInput(input)) {
 			// cast as we cannot import SearchEditor as a value b/c cyclic dependency.
 			return (this.editorService.activeEditorPane as SearchEditor).focusPreviousResult();
 		}

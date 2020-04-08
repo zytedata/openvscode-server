@@ -17,7 +17,7 @@ import { getSearchView } from 'vs/workbench/contrib/search/browser/searchActions
 import { SearchResult } from 'vs/workbench/contrib/search/common/searchModel';
 import * as Constants from 'vs/workbench/contrib/searchEditor/browser/constants';
 import { SearchEditor } from 'vs/workbench/contrib/searchEditor/browser/searchEditor';
-import { getOrMakeSearchEditorInput, SearchEditorInput } from 'vs/workbench/contrib/searchEditor/browser/searchEditorInput';
+import { getOrMakeSearchEditorInput, isSearchEditorInput } from 'vs/workbench/contrib/searchEditor/browser/searchEditorInput';
 import { serializeSearchResultForEditor } from 'vs/workbench/contrib/searchEditor/browser/searchEditorSerialization';
 import { IEditorService, SIDE_GROUP, ACTIVE_GROUP } from 'vs/workbench/services/editor/common/editorService';
 import { ISearchConfigurationProperties } from 'vs/workbench/services/search/common/search';
@@ -25,7 +25,7 @@ import { ISearchConfigurationProperties } from 'vs/workbench/services/search/com
 export const toggleSearchEditorCaseSensitiveCommand = (accessor: ServicesAccessor) => {
 	const editorService = accessor.get(IEditorService);
 	const input = editorService.activeEditor;
-	if (input instanceof SearchEditorInput) {
+	if (isSearchEditorInput(input)) {
 		(editorService.activeEditorPane as SearchEditor).toggleCaseSensitive();
 	}
 };
@@ -33,7 +33,7 @@ export const toggleSearchEditorCaseSensitiveCommand = (accessor: ServicesAccesso
 export const toggleSearchEditorWholeWordCommand = (accessor: ServicesAccessor) => {
 	const editorService = accessor.get(IEditorService);
 	const input = editorService.activeEditor;
-	if (input instanceof SearchEditorInput) {
+	if (isSearchEditorInput(input)) {
 		(editorService.activeEditorPane as SearchEditor).toggleWholeWords();
 	}
 };
@@ -41,7 +41,7 @@ export const toggleSearchEditorWholeWordCommand = (accessor: ServicesAccessor) =
 export const toggleSearchEditorRegexCommand = (accessor: ServicesAccessor) => {
 	const editorService = accessor.get(IEditorService);
 	const input = editorService.activeEditor;
-	if (input instanceof SearchEditorInput) {
+	if (isSearchEditorInput(input)) {
 		(editorService.activeEditorPane as SearchEditor).toggleRegex();
 	}
 };
@@ -49,7 +49,7 @@ export const toggleSearchEditorRegexCommand = (accessor: ServicesAccessor) => {
 export const toggleSearchEditorContextLinesCommand = (accessor: ServicesAccessor) => {
 	const editorService = accessor.get(IEditorService);
 	const input = editorService.activeEditor;
-	if (input instanceof SearchEditorInput) {
+	if (isSearchEditorInput(input)) {
 		(editorService.activeEditorPane as SearchEditor).toggleContextLines();
 	}
 };
@@ -57,7 +57,7 @@ export const toggleSearchEditorContextLinesCommand = (accessor: ServicesAccessor
 export const modifySearchEditorContextLinesCommand = (accessor: ServicesAccessor, increase: boolean) => {
 	const editorService = accessor.get(IEditorService);
 	const input = editorService.activeEditor;
-	if (input instanceof SearchEditorInput) {
+	if (isSearchEditorInput(input)) {
 		(editorService.activeEditorPane as SearchEditor).modifyContextLines(increase);
 	}
 };
@@ -65,7 +65,7 @@ export const modifySearchEditorContextLinesCommand = (accessor: ServicesAccessor
 export const selectAllSearchEditorMatchesCommand = (accessor: ServicesAccessor) => {
 	const editorService = accessor.get(IEditorService);
 	const input = editorService.activeEditor;
-	if (input instanceof SearchEditorInput) {
+	if (isSearchEditorInput(input)) {
 		(editorService.activeEditorPane as SearchEditor).focusAllResults();
 	}
 };
@@ -152,7 +152,7 @@ export class RerunSearchEditorSearchAction extends Action {
 
 	async run() {
 		const input = this.editorService.activeEditor;
-		if (input instanceof SearchEditorInput) {
+		if (isSearchEditorInput(input)) {
 			(this.editorService.activeEditorPane as SearchEditor).triggerSearch({ resetCursor: false });
 		}
 	}
@@ -181,7 +181,7 @@ const openNewSearchEditor =
 			const selection = activeModel?.getSelection();
 			selected = (selection && activeModel?.getModel()?.getValueInRange(selection)) ?? '';
 		} else {
-			if (editorService.activeEditor instanceof SearchEditorInput) {
+			if (isSearchEditorInput(editorService.activeEditor)) {
 				const active = editorService.activeEditorPane as SearchEditor;
 				selected = active.getSelected();
 			}
@@ -218,5 +218,5 @@ export const createEditorFromSearchResult =
 
 		const input = instantiationService.invokeFunction(getOrMakeSearchEditorInput, { text });
 		await editorService.openEditor(input, { pinned: true });
-		input.setMatchRanges(matchRanges);
+		input.getModel().setMatchRanges(matchRanges);
 	};
