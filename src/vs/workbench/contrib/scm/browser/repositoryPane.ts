@@ -74,6 +74,7 @@ import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IListAccessibilityProvider } from 'vs/base/browser/ui/list/listWidget';
 import { IModeService } from 'vs/editor/common/services/modeService';
 import { ILabelService } from 'vs/platform/label/common/label';
+import { DropdownMenuActionViewItem } from 'vs/base/browser/ui/dropdown/dropdown';
 
 type TreeElement = ISCMResourceGroup | IResourceNode<ISCMResource, ISCMResourceGroup> | ISCMResource;
 
@@ -676,6 +677,12 @@ export class ToggleViewModeAction extends Action {
 	}
 }
 
+class MyAction extends Action {
+	constructor() {
+		super('joao', 'Joao', 'joao', true);
+	}
+}
+
 export class RepositoryPane extends ViewPane {
 	private readonly defaultInputFontFamily = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif';
 
@@ -1055,15 +1062,7 @@ export class RepositoryPane extends ViewPane {
 	}
 
 	getActions(): IAction[] {
-		if (this.toggleViewModelModeAction) {
-
-			return [
-				this.toggleViewModelModeAction,
-				...this.menus.getTitleActions()
-			];
-		} else {
-			return this.menus.getTitleActions();
-		}
+		return [new MyAction()];
 	}
 
 	getSecondaryActions(): IAction[] {
@@ -1071,6 +1070,10 @@ export class RepositoryPane extends ViewPane {
 	}
 
 	getActionViewItem(action: IAction): IActionViewItem | undefined {
+		if (action instanceof MyAction) {
+			return new DropdownMenuActionViewItem(action, [action], this.contextMenuService, undefined, new ActionRunner(), undefined, 'joao');
+		}
+
 		if (!(action instanceof MenuItemAction)) {
 			return undefined;
 		}
