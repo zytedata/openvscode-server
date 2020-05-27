@@ -45,7 +45,7 @@ import { ICssStyleCollector, IColorTheme, IThemeService, registerThemingParticip
 import { getIgnoredSettings } from 'vs/platform/userDataSync/common/settingsMerge';
 import { ITOCEntry } from 'vs/workbench/contrib/preferences/browser/settingsLayout';
 import { ISettingsEditorViewState, settingKeyToDisplayFormat, SettingsTreeElement, SettingsTreeGroupChild, SettingsTreeGroupElement, SettingsTreeNewExtensionsElement, SettingsTreeSettingElement } from 'vs/workbench/contrib/preferences/browser/settingsTreeModels';
-import { ExcludeSettingWidget, IListChangeEvent, IListDataItem, ListSettingWidget, settingsHeaderForeground, settingsNumberInputBackground, settingsNumberInputBorder, settingsNumberInputForeground, settingsSelectBackground, settingsSelectBorder, settingsSelectForeground, settingsSelectListBorder, settingsTextInputBackground, settingsTextInputBorder, settingsTextInputForeground } from 'vs/workbench/contrib/preferences/browser/settingsWidgets';
+import { ExcludeSettingWidget, IListChangeEvent, IListDataItem, ListSettingWidget, settingsHeaderForeground, settingsNumberInputBackground, settingsNumberInputBorder, settingsNumberInputForeground, settingsSelectBackground, settingsSelectBorder, settingsSelectForeground, settingsSelectListBorder, settingsTextInputBackground, settingsTextInputBorder, settingsTextInputForeground, MapSettingWidget } from 'vs/workbench/contrib/preferences/browser/settingsWidgets';
 import { SETTINGS_EDITOR_COMMAND_SHOW_CONTEXT_MENU } from 'vs/workbench/contrib/preferences/common/preferences';
 import { IWorkbenchEnvironmentService } from 'vs/workbench/services/environment/common/environmentService';
 import { ISetting, ISettingsGroup, SettingValueType } from 'vs/workbench/services/preferences/common/preferences';
@@ -73,6 +73,16 @@ function getExcludeDisplayValue(element: SettingsTreeSettingElement): IListDataI
 				sibling
 			};
 		});
+}
+
+function getMapDisplayValue(element: SettingsTreeSettingElement): IListDataItem[] {
+	const data = element.isConfigured ?
+		{ ...element.defaultValue, ...element.scopeValue } :
+		element.defaultValue;
+
+	return Object.keys(data)
+		.filter(key => !!data[key])
+		.map(key => ({ id: key, value: key, sibling: data[key] }));
 }
 
 function getListDisplayValue(element: SettingsTreeSettingElement): IListDataItem[] {
@@ -242,6 +252,10 @@ interface ISettingExcludeItemTemplate extends ISettingItemTemplate<void> {
 	excludeWidget: ListSettingWidget;
 }
 
+interface ISettingMapItemTemplate extends ISettingItemTemplate<void> {
+	mapWidget: MapSettingWidget;
+}
+
 interface ISettingNewExtensionsTemplate extends IDisposableTemplate {
 	button: Button;
 	context?: SettingsTreeNewExtensionsElement;
@@ -258,6 +272,7 @@ const SETTINGS_ENUM_TEMPLATE_ID = 'settings.enum.template';
 const SETTINGS_BOOL_TEMPLATE_ID = 'settings.bool.template';
 const SETTINGS_ARRAY_TEMPLATE_ID = 'settings.array.template';
 const SETTINGS_EXCLUDE_TEMPLATE_ID = 'settings.exclude.template';
+const SETTINGS_MAP_TEMPLATE_ID = 'settings.map.template';
 const SETTINGS_COMPLEX_TEMPLATE_ID = 'settings.complex.template';
 const SETTINGS_NEW_EXTENSIONS_TEMPLATE_ID = 'settings.newExtensions.template';
 const SETTINGS_ELEMENT_TEMPLATE_ID = 'settings.group.template';
@@ -860,6 +875,72 @@ export class SettingArrayRenderer extends AbstractSettingRenderer implements ITr
 	}
 }
 
+export class SettingMapRenderer extends AbstractSettingRenderer implements ITreeRenderer<SettingsTreeSettingElement, never, ISettingMapItemTemplate> {
+	templateId = SETTINGS_MAP_TEMPLATE_ID;
+
+	renderTemplate(container: HTMLElement): ISettingMapItemTemplate {
+		const common = this.renderCommonTemplate(null, container, 'list');
+
+		const mapWidget = this._instantiationService.createInstance(MapSettingWidget, common.controlElement);
+		mapWidget.domNode.classList.add(AbstractSettingRenderer.CONTROL_CLASS);
+		common.toDispose.add(mapWidget);
+
+		const template: ISettingMapItemTemplate = {
+			...common,
+			mapWidget,
+		};
+
+		this.addSettingElementFocusHandler(template);
+
+		common.toDispose.add(mapWidget.onDidChangeList(e => this.onDidChangeMap(template, e)));
+
+		return template;
+	}
+
+	private onDidChangeMap(template: ISettingMapItemTemplate, e: IListChangeEvent): void {
+		if (template.context) {
+			const newValue = { ...template.context.scopeValue };
+
+			// first delete the existing entry, if present
+			if (e.originalValue) {
+				delete newValue[e.originalValue];
+			}
+
+			// then add the new or updated entry, if present
+			if (e.value && e.sibling) {
+				newValue[e.value] = e.sibling;
+			}
+
+			function sortKeys<T extends object>(obj: T) {
+				const sortedKeys = Object.keys(obj)
+					.sort((a, b) => a.localeCompare(b)) as Array<keyof T>;
+
+				const retVal: Partial<T> = {};
+				for (const key of sortedKeys) {
+					retVal[key] = obj[key];
+				}
+				return retVal;
+			}
+
+			this._onDidChangeSetting.fire({
+				key: template.context.setting.key,
+				value: Object.keys(newValue).length === 0 ? undefined : sortKeys(newValue),
+				type: template.context.valueType
+			});
+		}
+	}
+
+	renderElement(element: ITreeNode<SettingsTreeSettingElement, never>, index: number, templateData: ISettingMapItemTemplate): void {
+		super.renderSettingElement(element, index, templateData);
+	}
+
+	protected renderValue(dataElement: SettingsTreeSettingElement, template: ISettingMapItemTemplate, onChange: (value: string) => void): void {
+		const value = getMapDisplayValue(dataElement);
+		template.mapWidget.setValue(value);
+		template.context = dataElement;
+	}
+}
+
 export class SettingExcludeRenderer extends AbstractSettingRenderer implements ITreeRenderer<SettingsTreeSettingElement, never, ISettingExcludeItemTemplate> {
 	templateId = SETTINGS_EXCLUDE_TEMPLATE_ID;
 
@@ -1286,6 +1367,7 @@ export class SettingTreeRenderers {
 			this._instantiationService.createInstance(SettingTextRenderer, this.settingActions, actionFactory),
 			this._instantiationService.createInstance(SettingExcludeRenderer, this.settingActions, actionFactory),
 			this._instantiationService.createInstance(SettingEnumRenderer, this.settingActions, actionFactory),
+			this._instantiationService.createInstance(SettingMapRenderer, this.settingActions, actionFactory),
 		];
 
 		this.onDidClickOverrideElement = Event.any(...settingRenderers.map(r => r.onDidClickOverrideElement));
@@ -1522,6 +1604,10 @@ class SettingsTreeDelegate extends CachedListVirtualDelegate<SettingsTreeGroupCh
 
 			if (element.valueType === SettingValueType.Exclude) {
 				return SETTINGS_EXCLUDE_TEMPLATE_ID;
+			}
+
+			if (element.valueType === SettingValueType.Map) {
+				return SETTINGS_MAP_TEMPLATE_ID;
 			}
 
 			return SETTINGS_COMPLEX_TEMPLATE_ID;
