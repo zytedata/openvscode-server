@@ -217,6 +217,8 @@ export class SettingsTreeSettingElement extends SettingsTreeElement {
 			} else {
 				this.valueType = SettingValueType.Complex;
 			}
+		} else if (isMapSetting(this.setting)) {
+			this.valueType = SettingValueType.Map;
 		} else {
 			this.valueType = SettingValueType.Complex;
 		}
@@ -463,6 +465,23 @@ export function isExcludeSetting(setting: ISetting): boolean {
 	return setting.key === 'files.exclude' ||
 		setting.key === 'search.exclude' ||
 		setting.key === 'files.watcherExclude';
+}
+
+// TODO @9at8: More work is probably required in this function
+function isMapSetting(setting: ISetting): boolean {
+	if (setting.type !== 'object') {
+		return false;
+	}
+
+	if (setting.objectProperties) {
+		return Object.values(setting.objectProperties).every(({ type }) => type !== 'object');
+	}
+
+	if (setting.objectPatternProperties) {
+		return Object.values(setting.objectPatternProperties).every(({ type }) => type !== 'object');
+	}
+
+	return false;
 }
 
 function settingTypeEnumRenderable(_type: string | string[]) {
