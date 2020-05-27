@@ -145,6 +145,8 @@ export class ListSettingListModel {
 	private _editKey: EditKey | null = null;
 	private _selectedIdx: number | null = null;
 
+	protected newSibling: string | undefined;
+
 	get items(): IListViewItem[] {
 		const items = this._dataItems.map((item, i) => {
 			const editing = typeof this._editKey === 'number' && this._editKey === i;
@@ -160,11 +162,15 @@ export class ListSettingListModel {
 				editing: true,
 				selected: true,
 				value: '',
-				sibling: ''
+				sibling: this.newSibling
 			});
 		}
 
 		return items;
+	}
+
+	constructor(newSibling?: string) {
+		this.newSibling = newSibling;
 	}
 
 	setEditKey(key: EditKey): void {
@@ -210,10 +216,10 @@ export interface IListChangeEvent {
 export class ListSettingWidget extends Disposable {
 	private listElement: HTMLElement;
 	private readonly listDisposables = this._register(new DisposableStore());
-
-	private model = new ListSettingListModel();
-
 	private readonly _onDidChangeList = this._register(new Emitter<IListChangeEvent>());
+
+	protected model = new ListSettingListModel();
+
 	readonly onDidChangeList: Event<IListChangeEvent> = this._onDidChangeList.event;
 
 	get domNode(): HTMLElement {
@@ -255,6 +261,10 @@ export class ListSettingWidget extends Disposable {
 				e.stopPropagation();
 			}
 		}));
+	}
+
+	protected getConnectorText() {
+		return 'when:';
 	}
 
 	protected getLocalizedStrings() {
@@ -401,7 +411,7 @@ export class ListSettingWidget extends Disposable {
 		const valueElement = DOM.append(rowElement, $('.setting-list-value'));
 		const siblingElement = DOM.append(rowElement, $('.setting-list-sibling'));
 		valueElement.textContent = item.value;
-		siblingElement.textContent = item.sibling ? ('when: ' + item.sibling) : null;
+		siblingElement.textContent = item.sibling ? `${this.getConnectorText()} ${item.sibling}` : null;
 
 		actionBar.push([
 			this.createEditAction(idx),
@@ -481,7 +491,7 @@ export class ListSettingWidget extends Disposable {
 		this.listDisposables.add(DOM.addStandardDisposableListener(valueInput.inputElement, DOM.EventType.KEY_DOWN, onKeydown));
 
 		let siblingInput: InputBox;
-		if (item.sibling) {
+		if (item.sibling !== undefined) {
 			siblingInput = new InputBox(rowElement, this.contextViewService, {
 				placeholder: this.getLocalizedStrings().siblingInputPlaceholder
 			});
@@ -539,6 +549,36 @@ export class ExcludeSettingWidget extends ListSettingWidget {
 
 	protected getContainerClasses() {
 		return ['setting-list-exclude-widget'];
+	}
+}
+
+export class MapSettingWidget extends ListSettingWidget {
+	protected model = new ListSettingListModel('');
+
+	protected getConnectorText() {
+		return '->';
+	}
+
+	protected getLocalizedStrings() {
+		return {
+			deleteActionTooltip: localize('removeMapItem', "Remove key value pair"),
+			editActionTooltip: localize('editMapItem', "Edit key value pair"),
+			complexEditActionTooltip: localize('editMapItemInSettingsJson', "Edit key value pair in settings.json"),
+			addButtonLabel: localize('addMapItem', "Add key value pair"),
+			inputPlaceholder: localize('mapKeyInputPlaceholder', "Key"),
+			siblingInputPlaceholder: localize('mapValueInputPlaceholder', "Value")
+		};
+	}
+
+	protected getSettingListRowLocalizedStrings(pattern?: string, sibling?: string) {
+		return {
+			settingListRowValueHintLabel: localize('excludePatternHintLabel', "Exclude files matching `{0}`", pattern),
+			settingListRowSiblingHintLabel: localize('mapPairHintLabel', "The key `{0}` maps to `{1}`", pattern, sibling)
+		};
+	}
+
+	protected getContainerClasses() {
+		return ['setting-list-map-widget'];
 	}
 }
 

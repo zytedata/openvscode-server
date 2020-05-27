@@ -115,3 +115,10 @@
 	margin-bottom: 1px;
 	padding: 1px;
 }
+
+.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-map-widget .setting-list-value {
+	max-width: 50%;
+}
+.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-map-widget .setting-list-sibling {
+	max-width: 50%;
+}
