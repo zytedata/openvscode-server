@@ -23,7 +23,7 @@ import { MenuItemAction, IMenuService } from 'vs/platform/actions/common/actions
 import { IAction, IActionViewItem, ActionRunner, Action } from 'vs/base/common/actions';
 import { ContextAwareMenuEntryActionViewItem } from 'vs/platform/actions/browser/menuEntryActionViewItem';
 import { SCMMenus } from './menus';
-import { ActionBar, IActionViewItemProvider } from 'vs/base/browser/ui/actionbar/actionbar';
+import { ActionBar, IActionViewItemProvider, ActionViewItem } from 'vs/base/browser/ui/actionbar/actionbar';
 import { IThemeService, LIGHT, registerThemingParticipant, IFileIconTheme } from 'vs/platform/theme/common/themeService';
 import { isSCMResource, isSCMResourceGroup, connectPrimaryMenuToInlineActionBar } from './util';
 import { attachBadgeStyler } from 'vs/platform/theme/common/styler';
@@ -74,7 +74,6 @@ import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IListAccessibilityProvider } from 'vs/base/browser/ui/list/listWidget';
 import { IModeService } from 'vs/editor/common/services/modeService';
 import { ILabelService } from 'vs/platform/label/common/label';
-import { DropdownMenuActionViewItem } from 'vs/base/browser/ui/dropdown/dropdown';
 
 type TreeElement = ISCMResourceGroup | IResourceNode<ISCMResource, ISCMResourceGroup> | ISCMResource;
 
@@ -683,6 +682,13 @@ class MyAction extends Action {
 	}
 }
 
+class MyActionViewItem extends ActionViewItem {
+
+	render(container: HTMLElement): void {
+		container.append(document.createTextNode('joao'));
+	}
+}
+
 export class RepositoryPane extends ViewPane {
 	private readonly defaultInputFontFamily = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif';
 
@@ -1071,7 +1077,7 @@ export class RepositoryPane extends ViewPane {
 
 	getActionViewItem(action: IAction): IActionViewItem | undefined {
 		if (action instanceof MyAction) {
-			return new DropdownMenuActionViewItem(action, [action], this.contextMenuService, undefined, new ActionRunner(), undefined, 'joao');
+			return new MyActionViewItem(null, action);
 		}
 
 		if (!(action instanceof MenuItemAction)) {
