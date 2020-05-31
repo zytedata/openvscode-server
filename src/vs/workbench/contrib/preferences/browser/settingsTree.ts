@@ -45,7 +45,7 @@ import { ICssStyleCollector, IColorTheme, IThemeService, registerThemingParticip
 import { getIgnoredSettings } from 'vs/platform/userDataSync/common/settingsMerge';
 import { ITOCEntry } from 'vs/workbench/contrib/preferences/browser/settingsLayout';
 import { ISettingsEditorViewState, settingKeyToDisplayFormat, SettingsTreeElement, SettingsTreeGroupChild, SettingsTreeGroupElement, SettingsTreeNewExtensionsElement, SettingsTreeSettingElement } from 'vs/workbench/contrib/preferences/browser/settingsTreeModels';
-import { ExcludeSettingWidget, IListChangeEvent, IListDataItem, ListSettingWidget, settingsHeaderForeground, settingsNumberInputBackground, settingsNumberInputBorder, settingsNumberInputForeground, settingsSelectBackground, settingsSelectBorder, settingsSelectForeground, settingsSelectListBorder, settingsTextInputBackground, settingsTextInputBorder, settingsTextInputForeground, MapSettingWidget } from 'vs/workbench/contrib/preferences/browser/settingsWidgets';
+import { ExcludeSettingWidget, ISettingListChangeEvent, IListDataItem, ListSettingWidget, settingsHeaderForeground, settingsNumberInputBackground, settingsNumberInputBorder, settingsNumberInputForeground, settingsSelectBackground, settingsSelectBorder, settingsSelectForeground, settingsSelectListBorder, settingsTextInputBackground, settingsTextInputBorder, settingsTextInputForeground, MapSettingWidget } from 'vs/workbench/contrib/preferences/browser/settingsWidgets';
 import { SETTINGS_EDITOR_COMMAND_SHOW_CONTEXT_MENU } from 'vs/workbench/contrib/preferences/common/preferences';
 import { IWorkbenchEnvironmentService } from 'vs/workbench/services/environment/common/environmentService';
 import { ISetting, ISettingsGroup, SettingValueType } from 'vs/workbench/services/preferences/common/preferences';
@@ -812,7 +812,7 @@ export class SettingArrayRenderer extends AbstractSettingRenderer implements ITr
 		});
 	}
 
-	private computeNewList(template: ISettingListItemTemplate, e: IListChangeEvent): string[] | undefined | null {
+	private computeNewList(template: ISettingListItemTemplate, e: ISettingListChangeEvent<IListDataItem>): string[] | undefined | null {
 		if (template.context) {
 			let newValue: string[] = [];
 			if (isArray(template.context.scopeValue)) {
@@ -823,23 +823,23 @@ export class SettingArrayRenderer extends AbstractSettingRenderer implements ITr
 
 			if (e.targetIndex !== undefined) {
 				// Delete value
-				if (!e.value && e.originalValue && e.targetIndex > -1) {
+				if (!e.item?.value && e.originalItem.value && e.targetIndex > -1) {
 					newValue.splice(e.targetIndex, 1);
 				}
 				// Update value
-				else if (e.value && e.originalValue) {
+				else if (e.item?.value && e.originalItem.value) {
 					if (e.targetIndex > -1) {
-						newValue[e.targetIndex] = e.value;
+						newValue[e.targetIndex] = e.item.value;
 					}
 					// For some reason, we are updating and cannot find original value
 					// Just append the value in this case
 					else {
-						newValue.push(e.value);
+						newValue.push(e.item.value);
 					}
 				}
 				// Add value
-				else if (e.value && !e.originalValue && e.targetIndex >= newValue.length) {
-					newValue.push(e.value);
+				else if (e.item?.value && !e.originalItem.value && e.targetIndex >= newValue.length) {
+					newValue.push(e.item.value);
 				}
 			}
 			if (
@@ -897,18 +897,18 @@ export class SettingMapRenderer extends AbstractSettingRenderer implements ITree
 		return template;
 	}
 
-	private onDidChangeMap(template: ISettingMapItemTemplate, e: IListChangeEvent): void {
+	private onDidChangeMap(template: ISettingMapItemTemplate, e: ISettingListChangeEvent<IListDataItem>): void {
 		if (template.context) {
 			const newValue = { ...template.context.scopeValue };
 
 			// first delete the existing entry, if present
-			if (e.originalValue) {
-				delete newValue[e.originalValue];
+			if (e.originalItem.value) {
+				delete newValue[e.originalItem.value];
 			}
 
 			// then add the new or updated entry, if present
-			if (e.value && e.sibling) {
-				newValue[e.value] = e.sibling;
+			if (e.item?.value && e.item?.sibling) {
+				newValue[e.item.value] = e.item.sibling;
 			}
 
 			function sortKeys<T extends object>(obj: T) {
@@ -935,9 +935,20 @@ export class SettingMapRenderer extends AbstractSettingRenderer implements ITree
 	}
 
 	protected renderValue(dataElement: SettingsTreeSettingElement, template: ISettingMapItemTemplate, onChange: (value: string) => void): void {
-		const value = getMapDisplayValue(dataElement);
-		template.mapWidget.setValue(value);
-		template.context = dataElement;
+		if (dataElement.setting.objectProperties) {
+			const value = getMapDisplayValue(dataElement);
+			// template.mapWidget.setKeyType('enum', Object.keys(dataElement.setting.objectProperties));
+			template.mapWidget.setValue(value);
+			template.context = dataElement;
+		} else if (dataElement.setting.objectPatternProperties) {
+			const value = getMapDisplayValue(dataElement);
+			template.mapWidget.setValue(value);
+			template.context = dataElement;
+		} else {
+			const value = getMapDisplayValue(dataElement);
+			template.mapWidget.setValue(value);
+			template.context = dataElement;
+		}
 	}
 }
 
@@ -963,27 +974,27 @@ export class SettingExcludeRenderer extends AbstractSettingRenderer implements I
 		return template;
 	}
 
-	private onDidChangeExclude(template: ISettingExcludeItemTemplate, e: IListChangeEvent): void {
+	private onDidChangeExclude(template: ISettingExcludeItemTemplate, e: ISettingListChangeEvent<IListDataItem>): void {
 		if (template.context) {
 			const newValue = { ...template.context.scopeValue };
 
 			// first delete the existing entry, if present
-			if (e.originalValue) {
-				if (e.originalValue in template.context.defaultValue) {
+			if (e.originalItem.value) {
+				if (e.originalItem.value in template.context.defaultValue) {
 					// delete a default by overriding it
-					newValue[e.originalValue] = false;
+					newValue[e.originalItem.value] = false;
 				} else {
-					delete newValue[e.originalValue];
+					delete newValue[e.originalItem.value];
 				}
 			}
 
 			// then add the new or updated entry, if present
-			if (e.value) {
-				if (e.value in template.context.defaultValue && !e.sibling) {
+			if (e.item?.value) {
+				if (e.item.value in template.context.defaultValue && !e.item.sibling) {
 					// add a default by deleting its override
-					delete newValue[e.value];
+					delete newValue[e.item.value];
 				} else {
-					newValue[e.value] = e.sibling ? { when: e.sibling } : true;
+					newValue[e.item.value] = e.item.sibling ? { when: e.item.sibling } : true;
 				}
 			}
 

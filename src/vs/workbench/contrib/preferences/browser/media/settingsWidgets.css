@@ -49,6 +49,7 @@
 	display: none;
 	position: absolute;
 	right: 0px;
+	top: 0px;
 }
 
 .settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-row {
