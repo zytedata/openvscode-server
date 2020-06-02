@@ -7,14 +7,18 @@
 	width: 100%;
 }
 
-.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-value {
+.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-value,
+.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-map-widget .setting-list-map-key {
 	margin-right: 3px;
 	margin-left: 2px;
 }
 
 /* Deal with overflow */
 .settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-value,
-.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-sibling {
+.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-sibling,
+.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-map-widget .setting-list-map-key,
+.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-map-widget .setting-list-map-connector,
+.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-map-widget .setting-list-map-value {
 	white-space: pre;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -25,9 +29,16 @@
 .settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-sibling {
 	max-width: 10%;
 }
+.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-map-widget .setting-list-map-key,
+.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-map-widget .setting-list-map-value {
+	max-width: 50%;
+}
 
 .settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-value,
-.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-sibling {
+.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-sibling,
+.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-map-widget .setting-list-map-key,
+.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-map-widget .setting-list-map-connector,
+.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-map-widget .setting-list-map-value {
 	display: inline-block;
 	line-height: 24px;
 }
@@ -100,7 +111,8 @@
 }
 
 .settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-valueInput,
-.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-siblingInput {
+.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-siblingInput,
+.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-map-widget .setting-list-map-input {
 	height: 24px;
 	max-width: 320px;
 	flex: 1;
@@ -112,14 +124,8 @@
 }
 
 .settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-widget,
-.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-exclude-widget {
+.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-exclude-widget,
+.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-map-widget {
 	margin-bottom: 1px;
 	padding: 1px;
-}
-
-.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-map-widget .setting-list-value {
-	max-width: 50%;
-}
-.settings-editor > .settings-body > .settings-tree-container .setting-item.setting-item-list .setting-list-map-widget .setting-list-sibling {
-	max-width: 50%;
 }

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as DOM from 'vs/base/browser/dom';
-import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
+import { StandardKeyboardEvent, IKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { ActionBar } from 'vs/base/browser/ui/actionbar/actionbar';
 import { Button } from 'vs/base/browser/ui/button/button';
 import { InputBox } from 'vs/base/browser/ui/inputbox/inputBox';
@@ -17,11 +17,14 @@ import 'vs/css!./media/settingsWidgets';
 import { localize } from 'vs/nls';
 import { IContextViewService } from 'vs/platform/contextview/browser/contextView';
 import { foreground, inputBackground, inputBorder, inputForeground, listActiveSelectionBackground, listActiveSelectionForeground, listHoverBackground, listHoverForeground, listInactiveSelectionBackground, listInactiveSelectionForeground, registerColor, selectBackground, selectBorder, selectForeground, textLinkForeground, textPreformatForeground, editorWidgetBorder, textLinkActiveForeground, simpleCheckboxBackground, simpleCheckboxForeground, simpleCheckboxBorder } from 'vs/platform/theme/common/colorRegistry';
-import { attachButtonStyler, attachInputBoxStyler } from 'vs/platform/theme/common/styler';
+import { attachButtonStyler, attachInputBoxStyler, attachSelectBoxStyler } from 'vs/platform/theme/common/styler';
 import { ICssStyleCollector, IColorTheme, IThemeService, registerThemingParticipant } from 'vs/platform/theme/common/themeService';
 import { disposableTimeout } from 'vs/base/common/async';
 import { isUndefinedOrNull } from 'vs/base/common/types';
 import { preferencesEditIcon } from 'vs/workbench/contrib/preferences/browser/preferencesWidgets';
+import { SelectBox } from 'vs/base/browser/ui/selectBox/selectBox';
+import { isIOS } from 'vs/base/common/platform';
+import { BrowserFeatures } from 'vs/base/browser/canIUse';
 
 const $ = DOM.$;
 export const settingsHeaderForeground = registerColor('settings.headerForeground', { light: '#444444', dark: '#e7e7e7', hc: '#ffffff' }, localize('headerForeground', "The foreground color for a section header or active title."));
@@ -216,7 +219,7 @@ export interface ISettingListChangeEvent<TDataItem extends {}> {
 }
 
 interface IEditHandlers<TDataItem extends {}> {
-	onKeydown(event: StandardKeyboardEvent, updatedItem: TDataItem): void
+	onKeydown(event: IKeyboardEvent, updatedItem: TDataItem): void
 	onSubmit(updatedItem: TDataItem): void
 	onCancel(): void
 }
@@ -511,7 +514,7 @@ export class ListSettingWidget extends AbstractListSettingWidget<IListDataItem> 
 		});
 
 		const valueInput = new InputBox(rowElement, this.contextViewService, {
-			placeholder: localize('itemInputPlaceholder', "String Item..."),
+			placeholder: this.getLocalizedStrings().inputPlaceholder
 		});
 
 		valueInput.element.classList.add('setting-list-valueInput');
@@ -524,12 +527,12 @@ export class ListSettingWidget extends AbstractListSettingWidget<IListDataItem> 
 		valueInput.value = item.value;
 
 		// TODO @9at8: Dont cast to any
-		this.listDisposables.add(DOM.addStandardDisposableListener(valueInput.inputElement, DOM.EventType.KEY_DOWN, e => onKeydown(e as any, updatedItem())));
+		this.listDisposables.add(DOM.addStandardDisposableListener(valueInput.inputElement, DOM.EventType.KEY_DOWN, e => onKeydown(e, updatedItem())));
 
 		let siblingInput: InputBox | undefined;
 		if (!isUndefinedOrNull(item.sibling)) {
 			siblingInput = new InputBox(rowElement, this.contextViewService, {
-				placeholder: localize('listSiblingInputPlaceholder', "Sibling..."),
+				placeholder: this.getLocalizedStrings().siblingInputPlaceholder
 			});
 			siblingInput.element.classList.add('setting-list-siblingInput');
 			this.listDisposables.add(siblingInput);
@@ -541,7 +544,7 @@ export class ListSettingWidget extends AbstractListSettingWidget<IListDataItem> 
 			siblingInput.value = item.sibling;
 
 			// TODO @9at8: Dont cast to any
-			this.listDisposables.add(DOM.addStandardDisposableListener(siblingInput.inputElement, DOM.EventType.KEY_DOWN, e => onKeydown(e as any, updatedItem())));
+			this.listDisposables.add(DOM.addStandardDisposableListener(siblingInput.inputElement, DOM.EventType.KEY_DOWN, e => onKeydown(e, updatedItem())));
 		}
 
 		const okButton = this._register(new Button(rowElement));
@@ -582,6 +585,8 @@ export class ListSettingWidget extends AbstractListSettingWidget<IListDataItem> 
 			editActionTooltip: localize('editItem', "Edit Item"),
 			complexEditActionTooltip: localize('editItemInSettingsJson', "Edit Item in settings.json"),
 			addButtonLabel: localize('addItem', "Add Item"),
+			inputPlaceholder: localize('itemInputPlaceholder', "String Item..."),
+			siblingInputPlaceholder: localize('listSiblingInputPlaceholder', "Sibling..."),
 		};
 	}
 }
@@ -603,69 +608,181 @@ export class ExcludeSettingWidget extends ListSettingWidget {
 			editActionTooltip: localize('editExcludeItem', "Edit Exclude Item"),
 			complexEditActionTooltip: localize('editExcludeItemInSettingsJson', "Edit Exclude Item in settings.json"),
 			addButtonLabel: localize('addPattern', "Add Pattern"),
+			inputPlaceholder: localize('excludePatternInputPlaceholder', "Exclude Pattern..."),
+			siblingInputPlaceholder: localize('excludeSiblingInputPlaceholder', "When Pattern Is Present..."),
 		};
 	}
 }
 
-export class MapSettingWidget extends ExcludeSettingWidget {
-	protected getEmptyItem() {
+interface IMapStringData {
+	type: 'string'
+	data: string
+}
+
+interface IMapEnumData {
+	type: 'enum'
+	data: string
+	options: string[]
+}
+
+type MapKeyOrValue = IMapStringData | IMapEnumData;
+
+export interface IMapDataItem {
+	key: MapKeyOrValue;
+	value: MapKeyOrValue;
+}
+
+export class MapSettingWidget extends AbstractListSettingWidget<IMapDataItem> {
+	protected getEmptyItem(): IMapDataItem {
 		return {
-			value: '',
-			sibling: '',
+			key: { type: 'string', data: '' },
+			value: { type: 'string', data: '' },
 		};
 	}
+
+	protected getContainerClasses() {
+		return ['setting-list-map-widget'];
+	}
+
+	protected renderItem(item: IMapDataItem): HTMLElement {
+		const rowElement = $('.setting-list-row');
+
+		const keyElement = DOM.append(rowElement, $('.setting-list-map-key'));
+		const connector = DOM.append(rowElement, $('.setting-list-map-connector'));
+		const valueElement = DOM.append(rowElement, $('.setting-list-map-value'));
+
+		keyElement.textContent = item.key.data;
+		connector.textContent = this.getLocalizedStrings().connector;
+		valueElement.textContent = item.value.data;
+
+		return rowElement;
+	}
+
+	protected renderEdit(item: IMapDataItem, { onSubmit, onKeydown, onCancel }: IEditHandlers<IMapDataItem>): HTMLElement {
+		const rowElement = $('.setting-list-edit-row');
+
+		const keyWidget = this.renderEditWidget(item.key, rowElement);
+		const valueWidget = this.renderEditWidget(item.value, rowElement);
+
+		const updatedItem = () => {
+			const newItem = { ...item };
+
+			if (keyWidget instanceof InputBox) {
+				newItem.key = { type: 'string', data: keyWidget.value };
+			}
+
+			if (valueWidget instanceof InputBox) {
+				newItem.value = { type: 'string', data: valueWidget.value };
+			}
+
+			return newItem;
+		};
+
+		if (keyWidget instanceof InputBox) {
+			keyWidget.setPlaceHolder(this.getLocalizedStrings().keyInputPlaceholder);
+			this.listDisposables.add(DOM.addStandardDisposableListener(keyWidget.inputElement, DOM.EventType.KEY_DOWN, e => onKeydown(e, updatedItem())));
+		} else if (keyWidget instanceof SelectBox) {
+			keyWidget.onDidSelect(({ selected }) => {
+				onSubmit({ ...item, key: { ...item.key, data: selected } });
+			});
+		}
+
+		if (valueWidget instanceof InputBox) {
+			valueWidget.setPlaceHolder(this.getLocalizedStrings().valueInputPlaceholder);
+			this.listDisposables.add(DOM.addStandardDisposableListener(valueWidget.inputElement, DOM.EventType.KEY_DOWN, e => onKeydown(e, updatedItem())));
+		} else if (valueWidget instanceof SelectBox) {
+			valueWidget.onDidSelect(({ selected }) => {
+				onSubmit({ ...item, value: { ...item.value, data: selected } });
+			});
+		}
+
+		const okButton = this._register(new Button(rowElement));
+		okButton.label = localize('okButton', "OK");
+		okButton.element.classList.add('setting-list-okButton');
+		this.listDisposables.add(attachButtonStyler(okButton, this.themeService));
+		this.listDisposables.add(okButton.onDidClick(() => onSubmit(updatedItem())));
+
+		const cancelButton = this._register(new Button(rowElement));
+		cancelButton.label = localize('cancelButton', "Cancel");
+		cancelButton.element.classList.add('setting-list-okButton');
+		this.listDisposables.add(attachButtonStyler(cancelButton, this.themeService));
+		this.listDisposables.add(cancelButton.onDidClick(onCancel));
+
+		this.listDisposables.add(
+			disposableTimeout(() => {
+				keyWidget.focus();
+
+				if (keyWidget instanceof InputBox) {
+					keyWidget.select();
+				}
+			})
+		);
+
+		return rowElement;
+	}
+
+	protected isItemNew(item: IMapDataItem): boolean {
+		return item.key.data === '' && item.value.data === '';
+	}
+
+	protected getLocalizedRowTitle(item: IMapDataItem): string {
+		return localize('mapPairHintLabel', "The key `{0}` maps to `{1}`", item.key.data, item.value.data);
+	}
+
+	protected getLocalizedStrings() {
+		return {
+			deleteActionTooltip: localize('removeMapItem', "Remove key value pair"),
+			editActionTooltip: localize('editMapItem', "Edit key value pair"),
+			complexEditActionTooltip: localize('editMapItemInSettingsJson', "Edit key value pair in settings.json"),
+			addButtonLabel: localize('addMapItem', "Add key value pair"),
+			keyInputPlaceholder: localize('mapKeyInputPlaceholder', "Key"),
+			valueInputPlaceholder: localize('mapValueInputPlaceholder', "Value"),
+			connector: ' → ',
+		};
+	}
+
+	private renderEditWidget(keyOrValue: MapKeyOrValue, rowElement: HTMLElement) {
+		switch (keyOrValue.type) {
+			case 'string':
+				return this.renderStringEditWidget(keyOrValue, rowElement);
+			case 'enum':
+				return this.renderEnumEditWidget(keyOrValue, rowElement);
+		}
+	}
+
+	private renderStringEditWidget(keyOrValue: IMapStringData, rowElement: HTMLElement) {
+		const inputBox = new InputBox(rowElement, this.contextViewService);
+
+		inputBox.element.classList.add('setting-list-map-input');
+		this.listDisposables.add(attachInputBoxStyler(inputBox, this.themeService, {
+			inputBackground: settingsTextInputBackground,
+			inputForeground: settingsTextInputForeground,
+			inputBorder: settingsTextInputBorder
+		}));
+		this.listDisposables.add(inputBox);
+		inputBox.value = keyOrValue.data;
+
+		return inputBox;
+	}
+
+	private renderEnumEditWidget(keyOrValue: IMapEnumData, rowElement: HTMLElement) {
+		const selectBoxOptions = keyOrValue.options.map(text => ({ text }));
+		const dataIndex = keyOrValue.options.findIndex(option => keyOrValue.data === option);
+		const selected = dataIndex >= 0 ? dataIndex : 0;
+
+		const selectBox = new SelectBox(selectBoxOptions, selected, this.contextViewService, undefined, {
+			useCustomDrawn: !(isIOS && BrowserFeatures.pointerEvents)
+		});
+
+		this.listDisposables.add(attachSelectBoxStyler(selectBox, this.themeService, {
+			selectBackground: settingsSelectBackground,
+			selectForeground: settingsSelectForeground,
+			selectBorder: settingsSelectBorder,
+			selectListBorder: settingsSelectListBorder
+		}));
+
+		selectBox.render(rowElement);
+
+		return selectBox;
+	}
 }
-
-// interface MapEnumValue {
-// 	type: 'enum'
-// 	value: string[]
-// }
-
-// interface MapStringValue {
-// 	type: 'string'
-// 	value: string
-// }
-
-// type MapValue = MapEnumValue | MapStringValue;
-
-// export interface IMapDataItem {
-// 	value: MapValue;
-// 	sibling: MapValue;
-// }
-
-// export class MapSettingWidget extends ListSettingWidget {
-// 	protected model = new ListSettingListModel<IMapDataItem>({
-// 		value: { type: 'string', value: '' },
-// 		sibling: { type: 'string', value: '' },
-// 	});
-
-// 	protected getConnectorText() {
-// 		return '->';
-// 	}
-
-// 	protected getLocalizedStrings() {
-// 		return {
-// 			deleteActionTooltip: localize('removeMapItem', "Remove key value pair"),
-// 			editActionTooltip: localize('editMapItem', "Edit key value pair"),
-// 			complexEditActionTooltip: localize('editMapItemInSettingsJson', "Edit key value pair in settings.json"),
-// 			addButtonLabel: localize('addMapItem', "Add key value pair"),
-// 			inputPlaceholder: localize('mapKeyInputPlaceholder', "Key"),
-// 			siblingInputPlaceholder: localize('mapValueInputPlaceholder', "Value")
-// 		};
-// 	}
-
-// 	protected getSettingListRowLocalizedStrings(pattern?: string, sibling?: string) {
-// 		return {
-// 			settingListRowValueHintLabel: localize('excludePatternHintLabel', "Exclude files matching `{0}`", pattern),
-// 			settingListRowSiblingHintLabel: localize('mapPairHintLabel', "The key `{0}` maps to `{1}`", pattern, sibling)
-// 		};
-// 	}
-
-// 	protected getContainerClasses() {
-// 		return ['setting-list-map-widget'];
-// 	}
-
-// 	setKeyType(type: 'enum', values: string[]) {
-
-// 	}
-// }
