@@ -45,7 +45,7 @@ import { ICssStyleCollector, IColorTheme, IThemeService, registerThemingParticip
 import { getIgnoredSettings } from 'vs/platform/userDataSync/common/settingsMerge';
 import { ITOCEntry } from 'vs/workbench/contrib/preferences/browser/settingsLayout';
 import { ISettingsEditorViewState, settingKeyToDisplayFormat, SettingsTreeElement, SettingsTreeGroupChild, SettingsTreeGroupElement, SettingsTreeNewExtensionsElement, SettingsTreeSettingElement } from 'vs/workbench/contrib/preferences/browser/settingsTreeModels';
-import { ExcludeSettingWidget, ISettingListChangeEvent, IListDataItem, ListSettingWidget, settingsHeaderForeground, settingsNumberInputBackground, settingsNumberInputBorder, settingsNumberInputForeground, settingsSelectBackground, settingsSelectBorder, settingsSelectForeground, settingsSelectListBorder, settingsTextInputBackground, settingsTextInputBorder, settingsTextInputForeground, MapSettingWidget } from 'vs/workbench/contrib/preferences/browser/settingsWidgets';
+import { ExcludeSettingWidget, ISettingListChangeEvent, IListDataItem, ListSettingWidget, settingsHeaderForeground, settingsNumberInputBackground, settingsNumberInputBorder, settingsNumberInputForeground, settingsSelectBackground, settingsSelectBorder, settingsSelectForeground, settingsSelectListBorder, settingsTextInputBackground, settingsTextInputBorder, settingsTextInputForeground, MapSettingWidget, IMapDataItem } from 'vs/workbench/contrib/preferences/browser/settingsWidgets';
 import { SETTINGS_EDITOR_COMMAND_SHOW_CONTEXT_MENU } from 'vs/workbench/contrib/preferences/common/preferences';
 import { IWorkbenchEnvironmentService } from 'vs/workbench/services/environment/common/environmentService';
 import { ISetting, ISettingsGroup, SettingValueType } from 'vs/workbench/services/preferences/common/preferences';
@@ -75,14 +75,54 @@ function getExcludeDisplayValue(element: SettingsTreeSettingElement): IListDataI
 		});
 }
 
-function getMapDisplayValue(element: SettingsTreeSettingElement): IListDataItem[] {
+function getMapDisplayValue(element: SettingsTreeSettingElement): IMapDataItem[] {
 	const data = element.isConfigured ?
 		{ ...element.defaultValue, ...element.scopeValue } :
 		element.defaultValue;
 
-	return Object.keys(data)
-		.filter(key => !!data[key])
-		.map(key => ({ id: key, value: key, sibling: data[key] }));
+	let items: IMapDataItem[] = [];
+
+	if (element.setting.objectProperties) {
+		const keyOptions = Object.keys(element.setting.objectProperties);
+
+		// TODO @9at8: merge data with actual 'data' object
+		items = items.concat(
+			keyOptions
+				.filter(key => !!data[key])
+				.map(key => {
+					const valueOptions: string[] = element.setting.objectProperties?.[key].enum ?? [];
+
+					return {
+						key: {
+							type: 'enum',
+							data: key,
+							options: keyOptions,
+						},
+						value: {
+							type: valueOptions.length > 0 ? 'enum' : 'string',
+							data: data[key],
+							options: valueOptions,
+						},
+					};
+				})
+		);
+	}
+
+	if (element.setting.objectPatternProperties) {
+		// const keyPatterns = Object.keys(element.setting.objectPatternProperties);
+
+		// TODO @9at8: match with the available patterns to render enum values
+		items = items.concat(
+			Object.keys(data)
+				.filter(key => !!data[key] && !(key in (element.setting.objectProperties ?? {})))
+				.map(key => ({
+					key: { type: 'string', data: key },
+					value: { type: 'string', data: data[key] },
+				}))
+		);
+	}
+
+	return items;
 }
 
 function getListDisplayValue(element: SettingsTreeSettingElement): IListDataItem[] {
@@ -897,18 +937,18 @@ export class SettingMapRenderer extends AbstractSettingRenderer implements ITree
 		return template;
 	}
 
-	private onDidChangeMap(template: ISettingMapItemTemplate, e: ISettingListChangeEvent<IListDataItem>): void {
+	private onDidChangeMap(template: ISettingMapItemTemplate, e: ISettingListChangeEvent<IMapDataItem>): void {
 		if (template.context) {
 			const newValue = { ...template.context.scopeValue };
 
 			// first delete the existing entry, if present
-			if (e.originalItem.value) {
-				delete newValue[e.originalItem.value];
+			if (e.originalItem.key.data) {
+				delete newValue[e.originalItem.key.data];
 			}
 
 			// then add the new or updated entry, if present
-			if (e.item?.value && e.item?.sibling) {
-				newValue[e.item.value] = e.item.sibling;
+			if (e.item?.key.data && e.item.value.data) {
+				newValue[e.item.key.data] = e.item.value.data;
 			}
 
 			function sortKeys<T extends object>(obj: T) {
@@ -935,20 +975,9 @@ export class SettingMapRenderer extends AbstractSettingRenderer implements ITree
 	}
 
 	protected renderValue(dataElement: SettingsTreeSettingElement, template: ISettingMapItemTemplate, onChange: (value: string) => void): void {
-		if (dataElement.setting.objectProperties) {
-			const value = getMapDisplayValue(dataElement);
-			// template.mapWidget.setKeyType('enum', Object.keys(dataElement.setting.objectProperties));
-			template.mapWidget.setValue(value);
-			template.context = dataElement;
-		} else if (dataElement.setting.objectPatternProperties) {
-			const value = getMapDisplayValue(dataElement);
-			template.mapWidget.setValue(value);
-			template.context = dataElement;
-		} else {
-			const value = getMapDisplayValue(dataElement);
-			template.mapWidget.setValue(value);
-			template.context = dataElement;
-		}
+		const value = getMapDisplayValue(dataElement);
+		template.mapWidget.setValue(value);
+		template.context = dataElement;
 	}
 }
 
