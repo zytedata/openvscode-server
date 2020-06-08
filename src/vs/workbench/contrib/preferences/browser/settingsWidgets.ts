@@ -526,7 +526,6 @@ export class ListSettingWidget extends AbstractListSettingWidget<IListDataItem> 
 		this.listDisposables.add(valueInput);
 		valueInput.value = item.value;
 
-		// TODO @9at8: Dont cast to any
 		this.listDisposables.add(DOM.addStandardDisposableListener(valueInput.inputElement, DOM.EventType.KEY_DOWN, e => onKeydown(e, updatedItem())));
 
 		let siblingInput: InputBox | undefined;
@@ -543,7 +542,6 @@ export class ListSettingWidget extends AbstractListSettingWidget<IListDataItem> 
 			}));
 			siblingInput.value = item.sibling;
 
-			// TODO @9at8: Dont cast to any
 			this.listDisposables.add(DOM.addStandardDisposableListener(siblingInput.inputElement, DOM.EventType.KEY_DOWN, e => onKeydown(e, updatedItem())));
 		}
 
@@ -619,10 +617,15 @@ interface IMapStringData {
 	data: string
 }
 
+export interface IMapEnumOption {
+	value: string
+	description?: string
+}
+
 interface IMapEnumData {
 	type: 'enum'
 	data: string
-	options: string[]
+	options: IMapEnumOption[]
 }
 
 type MapKeyOrValue = IMapStringData | IMapEnumData;
@@ -766,8 +769,8 @@ export class MapSettingWidget extends AbstractListSettingWidget<IMapDataItem> {
 	}
 
 	private renderEnumEditWidget(keyOrValue: IMapEnumData, rowElement: HTMLElement) {
-		const selectBoxOptions = keyOrValue.options.map(text => ({ text }));
-		const dataIndex = keyOrValue.options.findIndex(option => keyOrValue.data === option);
+		const selectBoxOptions = keyOrValue.options.map(({ value, description }) => ({ text: value, description }));
+		const dataIndex = keyOrValue.options.findIndex(option => keyOrValue.data === option.value);
 		const selected = dataIndex >= 0 ? dataIndex : 0;
 
 		const selectBox = new SelectBox(selectBoxOptions, selected, this.contextViewService, undefined, {
@@ -781,7 +784,10 @@ export class MapSettingWidget extends AbstractListSettingWidget<IMapDataItem> {
 			selectListBorder: settingsSelectListBorder
 		}));
 
-		selectBox.render(rowElement);
+		const wrapper = $('.setting-list-map-input');
+
+		selectBox.render(wrapper);
+		rowElement.append(wrapper);
 
 		return selectBox;
 	}
