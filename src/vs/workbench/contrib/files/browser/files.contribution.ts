@@ -238,43 +238,8 @@ configurationRegistry.registerConfiguration({
 		[FILES_ASSOCIATIONS_CONFIG]: {
 			'type': 'object',
 			'markdownDescription': nls.localize('associations', "Configure file associations to languages (e.g. `\"*.extension\": \"html\"`). These have precedence over the default associations of the languages installed."),
-			'properties': {
-				'*.hello': { type: 'string' },
-				'*.world': { type: 'string' },
-				'*.foo': {
-					type: 'string',
-					enum: [
-						'typescript',
-						'html',
-						'css'
-					],
-					enumDescriptions: [
-						'TypeScript is a super set of JavaScript',
-						'Hyper Text Markup Language',
-					]
-				},
-			},
 			'patternProperties': {
-				'.*\\.(ss|scm)$': {
-					type: 'string',
-					enum: [
-						'lisp',
-						'scheme',
-						'racket',
-					],
-					enumDescriptions: [
-						'The LISP language',
-						'The Scheme language',
-						'The Racket language',
-					]
-				},
-				'.*\\.(ts|tsx)$': {
-					type: 'string',
-					enum: [
-						'typescript',
-						'typescript-react',
-					]
-				},
+				'.*': { type: 'string' },
 			},
 		},
 		'files.encoding': {
