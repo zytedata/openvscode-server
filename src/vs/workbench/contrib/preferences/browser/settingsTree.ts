@@ -45,7 +45,7 @@ import { ICssStyleCollector, IColorTheme, IThemeService, registerThemingParticip
 import { getIgnoredSettings } from 'vs/platform/userDataSync/common/settingsMerge';
 import { ITOCEntry } from 'vs/workbench/contrib/preferences/browser/settingsLayout';
 import { ISettingsEditorViewState, settingKeyToDisplayFormat, SettingsTreeElement, SettingsTreeGroupChild, SettingsTreeGroupElement, SettingsTreeNewExtensionsElement, SettingsTreeSettingElement } from 'vs/workbench/contrib/preferences/browser/settingsTreeModels';
-import { ExcludeSettingWidget, ISettingListChangeEvent, IListDataItem, ListSettingWidget, settingsHeaderForeground, settingsNumberInputBackground, settingsNumberInputBorder, settingsNumberInputForeground, settingsSelectBackground, settingsSelectBorder, settingsSelectForeground, settingsSelectListBorder, settingsTextInputBackground, settingsTextInputBorder, settingsTextInputForeground, MapSettingWidget, IMapDataItem } from 'vs/workbench/contrib/preferences/browser/settingsWidgets';
+import { ExcludeSettingWidget, ISettingListChangeEvent, IListDataItem, ListSettingWidget, settingsHeaderForeground, settingsNumberInputBackground, settingsNumberInputBorder, settingsNumberInputForeground, settingsSelectBackground, settingsSelectBorder, settingsSelectForeground, settingsSelectListBorder, settingsTextInputBackground, settingsTextInputBorder, settingsTextInputForeground, MapSettingWidget, IMapDataItem, IMapEnumOption } from 'vs/workbench/contrib/preferences/browser/settingsWidgets';
 import { SETTINGS_EDITOR_COMMAND_SHOW_CONTEXT_MENU } from 'vs/workbench/contrib/preferences/common/preferences';
 import { IWorkbenchEnvironmentService } from 'vs/workbench/services/environment/common/environmentService';
 import { ISetting, ISettingsGroup, SettingValueType } from 'vs/workbench/services/preferences/common/preferences';
@@ -53,6 +53,7 @@ import { IUserDataSyncEnablementService, getDefaultIgnoredSettings } from 'vs/pl
 import { getInvalidTypeError } from 'vs/workbench/services/preferences/common/preferencesValidation';
 import { Codicon } from 'vs/base/common/codicons';
 import { CodiconLabel } from 'vs/base/browser/ui/codicons/codiconLabel';
+import { IJSONSchema } from 'vs/base/common/jsonSchema';
 
 const $ = DOM.$;
 
@@ -75,6 +76,18 @@ function getExcludeDisplayValue(element: SettingsTreeSettingElement): IListDataI
 		});
 }
 
+function getEnumOptionsFromSchema(schema: IJSONSchema): IMapEnumOption[] {
+	const enumDescriptions = schema.enumDescriptions ?? [];
+
+	return (schema.enum ?? []).map((value, idx) => {
+		const description = idx < enumDescriptions.length
+			? enumDescriptions[idx]
+			: undefined;
+
+		return { value, description };
+	});
+}
+
 function getMapDisplayValue(element: SettingsTreeSettingElement): IMapDataItem[] {
 	const data = element.isConfigured ?
 		{ ...element.defaultValue, ...element.scopeValue } :
@@ -83,14 +96,14 @@ function getMapDisplayValue(element: SettingsTreeSettingElement): IMapDataItem[]
 	let items: IMapDataItem[] = [];
 
 	if (element.setting.objectProperties) {
-		const keyOptions = Object.keys(element.setting.objectProperties);
+		const wellDefinedKeys = Object.keys(element.setting.objectProperties);
+		const keyOptions = wellDefinedKeys.map(value => ({ value }));
 
-		// TODO @9at8: merge data with actual 'data' object
 		items = items.concat(
-			keyOptions
+			wellDefinedKeys
 				.filter(key => !!data[key])
 				.map(key => {
-					const valueOptions: string[] = element.setting.objectProperties?.[key].enum ?? [];
+					const valueEnumOptions = getEnumOptionsFromSchema(element.setting.objectProperties![key]);
 
 					return {
 						key: {
@@ -99,9 +112,9 @@ function getMapDisplayValue(element: SettingsTreeSettingElement): IMapDataItem[]
 							options: keyOptions,
 						},
 						value: {
-							type: valueOptions.length > 0 ? 'enum' : 'string',
+							type: valueEnumOptions.length > 0 ? 'enum' : 'string',
 							data: data[key],
-							options: valueOptions,
+							options: valueEnumOptions,
 						},
 					};
 				})
@@ -109,18 +122,36 @@ function getMapDisplayValue(element: SettingsTreeSettingElement): IMapDataItem[]
 	}
 
 	if (element.setting.objectPatternProperties) {
-		// const keyPatterns = Object.keys(element.setting.objectPatternProperties);
+		const patternsAndSchemas = Object
+			.entries(element.setting.objectPatternProperties)
+			.map(([pattern, schema]) => ({
+				pattern: new RegExp(pattern),
+				schema
+			}));
 
-		// TODO @9at8: match with the available patterns to render enum values
-		items = items.concat(
-			Object.keys(data)
-				.filter(key => !!data[key] && !(key in (element.setting.objectProperties ?? {})))
-				.map(key => ({
-					key: { type: 'string', data: key },
-					value: { type: 'string', data: data[key] },
-				}))
-		);
+		const keysWithSchema = Object.keys(data)
+			.filter(key => !!data[key] && !(key in (element.setting.objectProperties ?? {})))
+			.filter(key => patternsAndSchemas.find(({ pattern }) => pattern.test(key)))
+			.map(key => {
+				const { schema } = patternsAndSchemas.find(({ pattern }) => pattern.test(key))!;
+				return { key, schema };
+			});
+
+		items = items.concat(keysWithSchema.map(({ key, schema }) => {
+			const valueEnumOptions = getEnumOptionsFromSchema(schema);
+
+			return {
+				key: { type: 'string', data: key },
+				value: {
+					type: valueEnumOptions.length > 0 ? 'enum' : 'string',
+					data: data[key],
+					options: valueEnumOptions,
+				}
+			};
+		}));
 	}
+
+	// TODO @9at8: What should we do if properties don't match?
 
 	return items;
 }
