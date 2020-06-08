@@ -241,11 +241,40 @@ configurationRegistry.registerConfiguration({
 			'properties': {
 				'*.hello': { type: 'string' },
 				'*.world': { type: 'string' },
-				'*.foo': { type: 'string' },
-				'*.bar': { type: 'string' },
+				'*.foo': {
+					type: 'string',
+					enum: [
+						'typescript',
+						'html',
+						'css'
+					],
+					enumDescriptions: [
+						'TypeScript is a super set of JavaScript',
+						'Hyper Text Markup Language',
+					]
+				},
 			},
 			'patternProperties': {
-				'.*': { type: 'string' },
+				'.*\\.(ss|scm)$': {
+					type: 'string',
+					enum: [
+						'lisp',
+						'scheme',
+						'racket',
+					],
+					enumDescriptions: [
+						'The LISP language',
+						'The Scheme language',
+						'The Racket language',
+					]
+				},
+				'.*\\.(ts|tsx)$': {
+					type: 'string',
+					enum: [
+						'typescript',
+						'typescript-react',
+					]
+				},
 			},
 		},
 		'files.encoding': {
