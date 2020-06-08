@@ -5,7 +5,7 @@
 
 import * as arrays from 'vs/base/common/arrays';
 import { isFalsyOrWhitespace } from 'vs/base/common/strings';
-import { isArray, withUndefinedAsNull } from 'vs/base/common/types';
+import { isArray, withUndefinedAsNull, isUndefinedOrNull } from 'vs/base/common/types';
 import { URI } from 'vs/base/common/uri';
 import { localize } from 'vs/nls';
 import { ConfigurationTarget, IConfigurationService, IConfigurationValue } from 'vs/platform/configuration/common/configuration';
@@ -15,6 +15,7 @@ import { MODIFIED_SETTING_TAG } from 'vs/workbench/contrib/preferences/common/pr
 import { IExtensionSetting, ISearchResult, ISetting, SettingValueType } from 'vs/workbench/services/preferences/common/preferences';
 import { IWorkbenchEnvironmentService } from 'vs/workbench/services/environment/common/environmentService';
 import { FOLDER_SCOPES, WORKSPACE_SCOPES, REMOTE_MACHINE_SCOPES, LOCAL_MACHINE_SCOPES } from 'vs/workbench/services/configuration/common/configuration';
+import { IJSONSchemaMap } from 'vs/base/common/jsonSchema';
 
 export const ONLINE_SERVICES_SETTING_TAG = 'usesOnlineServices';
 
@@ -467,21 +468,21 @@ export function isExcludeSetting(setting: ISetting): boolean {
 		setting.key === 'files.watcherExclude';
 }
 
-// TODO @9at8: More work is probably required in this function
+function isMapRenderableSchemaMap(schemaMap: IJSONSchemaMap): boolean {
+	return Object.values(schemaMap).every(({ type }) => type === 'string');
+}
+
 function isMapSetting(setting: ISetting): boolean {
 	if (setting.type !== 'object') {
 		return false;
 	}
 
-	if (setting.objectProperties) {
-		return Object.values(setting.objectProperties).every(({ type }) => type !== 'object');
+	if (isUndefinedOrNull(setting.objectProperties) && isUndefinedOrNull(setting.objectPatternProperties)) {
+		return false;
 	}
 
-	if (setting.objectPatternProperties) {
-		return Object.values(setting.objectPatternProperties).every(({ type }) => type !== 'object');
-	}
-
-	return false;
+	return isMapRenderableSchemaMap(setting.objectProperties ?? {})
+		&& isMapRenderableSchemaMap(setting.objectPatternProperties ?? {});
 }
 
 function settingTypeEnumRenderable(_type: string | string[]) {
