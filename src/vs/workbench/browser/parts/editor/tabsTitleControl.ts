@@ -45,6 +45,8 @@ import { basenameOrAuthority } from 'vs/base/common/resources';
 import { RunOnceScheduler } from 'vs/base/common/async';
 import { IPathService } from 'vs/workbench/services/path/common/pathService';
 import { IPath, win32, posix } from 'vs/base/common/path';
+// eslint-disable-next-line code-import-patterns
+import { IHoverService } from 'vs/workbench/contrib/hover/browser/hover';
 
 interface IEditorInputLabel {
 	name?: string;
@@ -103,7 +105,8 @@ export class TabsTitleControl extends TitleControl {
 		@IFileService fileService: IFileService,
 		@IEditorService private readonly editorService: EditorServiceImpl,
 		@IPathService private readonly pathService: IPathService,
-		@IEditorGroupsService private readonly editorGroupService: IEditorGroupsService
+		@IEditorGroupsService private readonly editorGroupService: IEditorGroupsService,
+		@IHoverService private readonly hoverService: IHoverService
 	) {
 		super(parent, accessor, group, contextMenuService, instantiationService, contextKeyService, keybindingService, telemetryService, notificationService, menuService, quickInputService, themeService, extensionService, configurationService, fileService);
 
@@ -632,6 +635,13 @@ export class TabsTitleControl extends TitleControl {
 				this.onContextMenu(input, e, tab);
 			}
 		};
+
+		disposables.add(addDisposableListener(tab, EventType.MOUSE_ENTER, (e: MouseEvent) => {
+			this.hoverService.showHover({
+				target: { targetElements: [tab], dispose: () => { } },
+				text: { value: 'This is some text' }
+			});
+		}));
 
 		// Open on Click / Touch
 		disposables.add(addDisposableListener(tab, EventType.MOUSE_DOWN, (e: MouseEvent) => handleClickOrTouch(e)));
