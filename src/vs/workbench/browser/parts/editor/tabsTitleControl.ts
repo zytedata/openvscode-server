@@ -637,9 +637,15 @@ export class TabsTitleControl extends TitleControl {
 		};
 
 		disposables.add(addDisposableListener(tab, EventType.MOUSE_ENTER, (e: MouseEvent) => {
+			if (!this.group.isSticky(index)) {
+				return;
+			}
+			const label = this.tabLabels[index];
+
 			this.hoverService.showHover({
-				target: { targetElements: [tab], dispose: () => { } },
-				text: { value: 'This is some text' }
+				target: tab,
+				text: { value: label.title! },
+				hideOnHover: true
 			});
 		}));
 
