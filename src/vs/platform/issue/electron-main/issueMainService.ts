@@ -195,9 +195,11 @@ export class IssueMainService implements ICommonIssueService {
 						backgroundColor: data.styles.backgroundColor || DEFAULT_BACKGROUND_COLOR,
 						webPreferences: {
 							preload: URI.parse(require.toUrl('vs/base/parts/sandbox/electron-browser/preload.js')).fsPath,
-							nodeIntegration: true,
+							sandbox: true,
 							enableWebSQL: false,
-							nativeWindowOpen: true
+							devTools: false,
+							enableRemoteModule: false,
+							v8CacheOptions: 'bypassHeatCheck'
 						}
 					});
 
@@ -247,9 +249,11 @@ export class IssueMainService implements ICommonIssueService {
 						title: localize('processExplorer', "Process Explorer"),
 						webPreferences: {
 							preload: URI.parse(require.toUrl('vs/base/parts/sandbox/electron-browser/preload.js')).fsPath,
-							nodeIntegration: true,
 							enableWebSQL: false,
-							nativeWindowOpen: true
+							sandbox: true,
+							devTools: false,
+							enableRemoteModule: false,
+							v8CacheOptions: 'bypassHeatCheck'
 						}
 					});
 

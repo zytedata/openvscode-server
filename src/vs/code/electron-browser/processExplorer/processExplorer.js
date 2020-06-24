@@ -9,5 +9,5 @@
 const bootstrapWindow = require('../../../../bootstrap-window');
 
 bootstrapWindow.load(['vs/code/electron-browser/processExplorer/processExplorerMain'], function (processExplorer, configuration) {
-	processExplorer.startup(configuration.data);
+	processExplorer.startup(configuration);
 }, { forceEnableDeveloperKeybindings: true });

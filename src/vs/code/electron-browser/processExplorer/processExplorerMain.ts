@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import 'vs/css!./media/processExplorer';
-import { clipboard } from 'electron';
 import { webFrame, ipcRenderer } from 'vs/base/parts/sandbox/electron-sandbox/globals';
 import { repeat } from 'vs/base/common/strings';
 import { totalmem } from 'os';
@@ -19,6 +18,12 @@ import { ProcessItem } from 'vs/base/common/processes';
 import { addDisposableListener, addClass } from 'vs/base/browser/dom';
 import { DisposableStore } from 'vs/base/common/lifecycle';
 import { isRemoteDiagnosticError, IRemoteDiagnosticError } from 'vs/platform/diagnostics/common/diagnostics';
+import { ServiceCollection } from 'vs/platform/instantiation/common/serviceCollection';
+import { IMainProcessService, MainProcessService } from 'vs/platform/ipc/electron-sandbox/mainProcessService';
+import { ElectronService, IElectronService } from 'vs/platform/electron/electron-sandbox/electron';
+import { INativeWindowConfiguration } from 'vs/platform/windows/node/window';
+//import { NativeClipboardService } from 'vs/workbench/services/clipboard/electron-sandbox/clipboardService';
+import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService';
 
 let mapPidToWindowTitle = new Map<number, string>();
 
@@ -27,6 +32,12 @@ const DEBUG_PORT_PATTERN = /\s--(inspect|debug)-port=(\d+)/;
 const listeners = new DisposableStore();
 const collapsedStateCache: Map<string, boolean> = new Map<string, boolean>();
 let lastRequestTime: number;
+let electronService: IElectronService;
+let clipboardService: IClipboardService;
+
+interface ProcessExplorerConfiguration extends INativeWindowConfiguration {
+	data: ProcessExplorerData;
+}
 
 interface FormattedProcessItem {
 	cpu: number;
@@ -331,7 +342,7 @@ function showContextMenu(e: MouseEvent, item: FormattedProcessItem, isLocal: boo
 		click() {
 			const row = document.getElementById(pid.toString());
 			if (row) {
-				clipboard.writeText(row.innerText);
+				//clipboardService.writeText(row.innerText);
 			}
 		}
 	});
@@ -341,7 +352,7 @@ function showContextMenu(e: MouseEvent, item: FormattedProcessItem, isLocal: boo
 		click() {
 			const processList = document.getElementById('process-list');
 			if (processList) {
-				clipboard.writeText(processList.innerText);
+				//clipboardService.writeText(processList.innerText);
 			}
 		}
 	});
@@ -388,12 +399,21 @@ function createCloseListener(): void {
 	});
 }
 
-export function startup(data: ProcessExplorerData): void {
+export function startup(configuration: ProcessExplorerConfiguration): void {
 	const platformClass = platform.isWindows ? 'windows' : platform.isLinux ? 'linux' : 'mac';
-	addClass(document.body, platformClass); // used by our fonts
+	const serviceCollection = new ServiceCollection();
+	const mainProcessService = new MainProcessService(configuration.windowId);
+	serviceCollection.set(IMainProcessService, mainProcessService);
 
-	applyStyles(data.styles);
-	applyZoom(data.zoomLevel);
+	electronService = new ElectronService(configuration.windowId, mainProcessService) as IElectronService;
+	serviceCollection.set(IElectronService, electronService);
+
+	//clipboardService = new NativeClipboardService(electronService);
+	//serviceCollection.set(IClipboardService, clipboardService);
+
+	addClass(document.body, platformClass); // used by our fonts
+	applyStyles(configuration.data.styles);
+	applyZoom(configuration.data.zoomLevel);
 	createCloseListener();
 
 	// Map window process pids to titles, annotate process names with this when rendering to distinguish between them
