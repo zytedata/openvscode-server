@@ -1074,33 +1074,29 @@ declare module 'vscode' {
 		terminal: Terminal;
 	}
 
-	export interface TerminalLinkProvider<T = TerminalLink> {
+	export interface TerminalLinkProvider<T extends TerminalLink = TerminalLink> {
+		/**
+		 * Provide terminal links for the given context.
+		 * @param context Information about what links are being provided for.
+		 */
 		provideTerminalLinks(context: TerminalLinkContext): ProviderResult<T[]>
 
 		/**
 		 * Handle an activated terminal link.
-		 *
-		 * @returns Whether the link was handled, if not VS Code will attempt to open it.
 		 */
-		handleTerminalLink(link: T): ProviderResult<boolean>;
+		handleTerminalLink(link: T): void;
 	}
 
 	export interface TerminalLink {
 		/**
-		 * The start index of the link on [TerminalLinkContext.line](#TerminalLinkContext.line].
+		 * The 0-based start index of the link on [TerminalLinkContext.line](#TerminalLinkContext.line].
 		 */
 		startIndex: number;
 
 		/**
-		 * The length of the link on [TerminalLinkContext.line](#TerminalLinkContext.line]
+		 * The 0-based end index of the link on [TerminalLinkContext.line](#TerminalLinkContext.line].
 		 */
-		length: number;
-
-		/**
-		 * The uri this link points to. If set, and {@link TerminalLinkProvider.handlerTerminalLink}
-		 * is not implemented or returns false, then VS Code will try to open the Uri.
-		 */
-		target?: Uri;
+		endIndex: number;
 
 		/**
 		 * The tooltip text when you hover over this link.
@@ -1150,6 +1146,11 @@ declare module 'vscode' {
 
 	}
 
+	// https://github.com/microsoft/vscode/issues/100741
+	export interface TreeDataProvider<T> {
+		resolveTreeItem?(element: T, item: TreeItem2): TreeItem2 | Thenable<TreeItem2>;
+	}
+
 	export class TreeItem2 extends TreeItem {
 		/**
 		 * Label describing this item. When `falsy`, it is derived from [resourceUri](#TreeItem.resourceUri).
@@ -1160,13 +1161,6 @@ declare module 'vscode' {
 		 * Content to be shown when you hover over the tree item.
 		 */
 		tooltip?: string | MarkdownString | /* for compilation */ any;
-
-		/**
-		 * Accessibility information used when screen reader interacts with this tree item.
-		 * Generally, a TreeItem has no need to set the `role` of the accessibilityInformation;
-		 * however, there are cases where a TreeItem is not displayed in a tree-like way where setting the `role` may make sense.
-		 */
-		accessibilityInformation?: AccessibilityInformation;
 
 		/**
 		 * @param label Label describing this item
@@ -1519,17 +1513,22 @@ declare module 'vscode' {
 		metadata: NotebookDocumentMetadata;
 	}
 
-	export interface NotebookConcatTextDocument extends TextDocument {
+	export interface NotebookConcatTextDocument {
 		isClosed: boolean;
 		dispose(): void;
 		onDidChange: Event<void>;
 		version: number;
 		getText(): string;
 		getText(range: Range): string;
+
 		offsetAt(position: Position): number;
 		positionAt(offset: number): Position;
+		validateRange(range: Range): Range;
+		validatePosition(position: Position): Position;
+
 		locationAt(positionOrRange: Position | Range): Location;
 		positionAt(location: Location): Position;
+		contains(uri: Uri): boolean
 	}
 
 	export interface NotebookEditorCellEdit {
@@ -2036,26 +2035,6 @@ declare module 'vscode' {
 
 	//#endregion
 
-	//#region Dialog title: https://github.com/microsoft/vscode/issues/82871
-
-	/**
-	 * Options to configure the behaviour of a file open dialog.
-	 *
-	 * * Note 1: A dialog can select files, folders, or both. This is not true for Windows
-	 * which enforces to open either files or folder, but *not both*.
-	 * * Note 2: Explicitly setting `canSelectFiles` and `canSelectFolders` to `false` is futile
-	 * and the editor then silently adjusts the options to select files.
-	 */
-	export interface OpenDialogOptions {
-		/**
-		 * Dialog title.
-		 *
-		 * Depending on the underlying operating system this parameter might be ignored, since some
-		 * systems do not present title on open dialogs.
-		 */
-		title?: string;
-	}
-
 	/**
 	 * Options to configure the behaviour of a file save dialog.
 	 */
@@ -2067,25 +2046,6 @@ declare module 'vscode' {
 		 * systems do not present title on save dialogs.
 		 */
 		title?: string;
-	}
-
-	//#endregion
-
-	//#region Accessibility information: https://github.com/microsoft/vscode/issues/95360
-
-	/**
-	 * Accessibility information which controls screen reader behavior.
-	 */
-	export interface AccessibilityInformation {
-		label: string;
-		role?: string;
-	}
-
-	export interface StatusBarItem {
-		/**
-		 * Accessibility information used when screen reader interacts with this StatusBar item
-		 */
-		accessibilityInformation?: AccessibilityInformation;
 	}
 
 	//#endregion

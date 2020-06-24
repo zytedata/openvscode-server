@@ -10,10 +10,9 @@ import { IProgress } from 'vs/platform/progress/common/progress';
 import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IWorkingCopyFileService } from 'vs/workbench/services/workingCopy/common/workingCopyFileService';
-import { IWorkspaceUndoRedoElement, UndoRedoElementType, IResourceUndoRedoElement, IUndoRedoService } from 'vs/platform/undoRedo/common/undoRedo';
+import { IWorkspaceUndoRedoElement, UndoRedoElementType, IUndoRedoService } from 'vs/platform/undoRedo/common/undoRedo';
 import { URI } from 'vs/base/common/uri';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
-
 import { ILogService } from 'vs/platform/log/common/log';
 import { VSBuffer } from 'vs/base/common/buffer';
 
@@ -118,14 +117,13 @@ class FileUndoRedoElement implements IWorkspaceUndoRedoElement {
 
 	readonly type = UndoRedoElementType.Workspace;
 
-	readonly resources: readonly URI[] = [];
+	readonly resources: readonly URI[];
 
 	constructor(
 		readonly label: string,
 		readonly operations: IFileOperation[]
 	) {
-		// enable undo/redo here 👇
-		// this.resources = (<URI[]>[]).concat(...operations.map(op => op.uris));
+		this.resources = (<URI[]>[]).concat(...operations.map(op => op.uris));
 	}
 
 	async undo(): Promise<void> {
@@ -142,10 +140,6 @@ class FileUndoRedoElement implements IWorkspaceUndoRedoElement {
 			const undo = await op.perform();
 			this.operations[i] = undo;
 		}
-	}
-
-	split(): IResourceUndoRedoElement[] {
-		return [];
 	}
 }
 
