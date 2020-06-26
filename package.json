@@ -15,6 +15,7 @@
     "postinstall": "node build/npm/postinstall.js",
     "compile": "gulp compile --max_old_space_size=4095",
     "watch": "gulp watch --max_old_space_size=4095",
+    "watch-web": "gulp watch-web --max_old_space_size=4095",
     "watchd": "deemon yarn watch",
     "kill-watchd": "deemon --kill yarn watch",
     "restart-watchd": "deemon --restart yarn watch",
@@ -162,9 +163,9 @@
     "vsce": "1.48.0",
     "vscode-debugprotocol": "1.41.0",
     "vscode-nls-dev": "^3.3.1",
-    "webpack": "^4.16.5",
-    "webpack-cli": "^3.3.8",
-    "webpack-stream": "^5.1.1",
+    "webpack": "^4.43.0",
+    "webpack-cli": "^3.3.12",
+    "webpack-stream": "^5.2.1",
     "yaserver": "^0.2.0"
   },
   "repository": {
