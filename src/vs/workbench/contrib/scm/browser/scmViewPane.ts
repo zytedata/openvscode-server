@@ -259,6 +259,7 @@ class InputRenderer implements ICompressibleTreeRenderer<ISCMInput, FuzzyScore, 
 	static readonly TEMPLATE_ID = 'input';
 	get templateId(): string { return InputRenderer.TEMPLATE_ID; }
 
+	private inputWidgets = new Map<ISCMInput, SCMInputWidget>();
 	private contentHeights = new WeakMap<ISCMInput, number>();
 
 	constructor(
@@ -284,6 +285,10 @@ class InputRenderer implements ICompressibleTreeRenderer<ISCMInput, FuzzyScore, 
 		const input = node.element;
 		templateData.inputWidget.input = input;
 		disposables.add({ dispose: () => templateData.inputWidget.input = undefined });
+
+		// Remember widget
+		this.inputWidgets.set(input, templateData.inputWidget);
+		disposables.add({ dispose: () => this.inputWidgets.delete(input) });
 
 		// Rerender the element whenever the editor content height changes
 		const onDidChangeContentHeight = () => {
@@ -332,6 +337,10 @@ class InputRenderer implements ICompressibleTreeRenderer<ISCMInput, FuzzyScore, 
 
 	getHeight(input: ISCMInput): number {
 		return (this.contentHeights.get(input) ?? InputRenderer.DEFAULT_HEIGHT) + 10;
+	}
+
+	getRenderedInputWidget(input: ISCMInput): SCMInputWidget | undefined {
+		return this.inputWidgets.get(input);
 	}
 }
 
@@ -845,6 +854,7 @@ class ViewModel {
 		private repositories: ISequence<ISCMRepository>,
 		private tree: WorkbenchCompressibleObjectTree<TreeElement, FuzzyScore>,
 		private menus: SCMMenus,
+		private inputRenderer: InputRenderer,
 		private _mode: ViewModelMode,
 		private _sortKey: ViewModelSortKey,
 		@IEditorService protected editorService: IEditorService,
@@ -1023,6 +1033,19 @@ class ViewModel {
 		}
 	}
 
+	focus() {
+		for (const repository of this.repositories.elements) {
+			const widget = this.inputRenderer.getRenderedInputWidget(repository.input);
+
+			if (widget) {
+				widget.focus();
+				return;
+			}
+		}
+
+		this.tree.domFocus();
+	}
+
 	getViewActions(): IAction[] {
 		if (this.repositories.elements.length !== 1) {
 			return [];
@@ -1197,6 +1220,7 @@ class SCMInputWidget extends Disposable {
 
 	set input(input: ISCMInput | undefined) {
 		this.validationDisposable.dispose();
+		removeClass(this.editorContainer, 'synthetic-focus');
 
 		this.repositoryDisposables.dispose();
 		this.repositoryDisposables = new DisposableStore();
@@ -1387,6 +1411,11 @@ class SCMInputWidget extends Disposable {
 		this.renderValidation();
 	}
 
+	focus(): void {
+		this.inputEditor.focus();
+		addClass(this.editorContainer, 'synthetic-focus');
+	}
+
 	private renderValidation(): void {
 		this.validationDisposable.dispose();
 
@@ -1448,6 +1477,7 @@ export class SCMViewPane extends ViewPane {
 	private viewModel!: ViewModel;
 	private listLabels!: ResourceLabels;
 	private menus!: SCMMenus;
+	private inputRenderer!: InputRenderer;
 
 	constructor(
 		options: IViewPaneOptions,
@@ -1490,8 +1520,8 @@ export class SCMViewPane extends ViewPane {
 
 		this._register(repositories.onDidSplice(() => this.updateActions()));
 
-		const inputRenderer = this.instantiationService.createInstance(InputRenderer, this.layoutCache, (input, height) => this.tree.updateElementHeight(input, height));
-		const delegate = new ProviderListDelegate(inputRenderer);
+		this.inputRenderer = this.instantiationService.createInstance(InputRenderer, this.layoutCache, (input, height) => this.tree.updateElementHeight(input, height));
+		const delegate = new ProviderListDelegate(this.inputRenderer);
 
 		const actionViewItemProvider = (action: IAction) => this.getActionViewItem(action);
 
@@ -1504,7 +1534,7 @@ export class SCMViewPane extends ViewPane {
 
 		const renderers = [
 			this.instantiationService.createInstance(RepositoryRenderer, actionViewItemProvider, this.menus),
-			inputRenderer,
+			this.inputRenderer,
 			this.instantiationService.createInstance(ResourceGroupRenderer, actionViewItemProvider, this.menus),
 			this.instantiationService.createInstance(ResourceRenderer, () => this.viewModel, this.listLabels, actionViewItemProvider, actionRunner, this.menus)
 		];
@@ -1546,7 +1576,7 @@ export class SCMViewPane extends ViewPane {
 			viewMode = storageMode;
 		}
 
-		this.viewModel = this.instantiationService.createInstance(ViewModel, repositories, this.tree, this.menus, viewMode, ViewModelSortKey.Path);
+		this.viewModel = this.instantiationService.createInstance(ViewModel, repositories, this.tree, this.menus, this.inputRenderer, viewMode, ViewModelSortKey.Path);
 		this._register(this.viewModel);
 
 		addClass(this.listContainer, 'file-icon-themable-tree');
@@ -1594,7 +1624,7 @@ export class SCMViewPane extends ViewPane {
 		super.focus();
 
 		if (this.isExpanded()) {
-			this.tree.domFocus();
+			this.viewModel.focus();
 		}
 	}
 
@@ -1635,7 +1665,23 @@ export class SCMViewPane extends ViewPane {
 	}
 
 	private async open(e: IOpenEvent<TreeElement | null>): Promise<void> {
-		if (!e.element || isSCMRepository(e.element) || isSCMInput(e.element) || isSCMResourceGroup(e.element) || ResourceTree.isResourceNode(e.element)) {
+		if (!e.element || isSCMRepository(e.element) || isSCMResourceGroup(e.element) || ResourceTree.isResourceNode(e.element)) {
+			return;
+		}
+
+		if (isSCMInput(e.element)) {
+			const widget = this.inputRenderer.getRenderedInputWidget(e.element);
+
+			if (widget) {
+				widget.focus();
+
+				const selection = this.tree.getSelection();
+
+				if (selection.length === 1 && selection[0] === e.element) {
+					setTimeout(() => this.tree.setSelection([]));
+				}
+			}
+
 			return;
 		}
 
