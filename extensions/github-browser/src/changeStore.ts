@@ -5,7 +5,7 @@
 
 'use strict';
 import { commands, Event, EventEmitter, FileStat, FileType, Memento, TextDocumentShowOptions, Uri, ViewColumn } from 'vscode';
-import { getRootUri, getRelativePath } from './extension';
+import { getRootUri, getRelativePath, isChild } from './extension';
 import { sha1 } from './sha1';
 
 const textDecoder = new TextDecoder();
@@ -191,21 +191,29 @@ export class ChangeStore implements IChangeStore, IWritableChangeStore {
 			return entries;
 		}
 
+		const folderPath = getRelativePath(rootUri, uri);
+
 		const operations = this.getChanges(rootUri);
 		for (const operation of operations) {
 			switch (operation.type) {
 				case 'changed':
 					continue;
+
 				case 'created': {
-					const file = getRelativePath(rootUri, operation.uri);
-					entries.push([file, FileType.File]);
+					const filePath = getRelativePath(rootUri, operation.uri);
+					if (isChild(folderPath, filePath)) {
+						entries.push([filePath, FileType.File]);
+					}
 					break;
 				}
+
 				case 'deleted': {
-					const file = getRelativePath(rootUri, operation.uri);
-					const index = entries.findIndex(([path]) => path === file);
-					if (index !== -1) {
-						entries.splice(index, 1);
+					const filePath = getRelativePath(rootUri, operation.uri);
+					if (isChild(folderPath, filePath)) {
+						const index = entries.findIndex(([path]) => path === filePath);
+						if (index !== -1) {
+							entries.splice(index, 1);
+						}
 					}
 					break;
 				}
@@ -368,33 +376,5 @@ export class ChangeStore implements IChangeStore, IWritableChangeStore {
 
 	private async discardWorkingContent(uri: Uri): Promise<void> {
 		await this.memento.update(`${workingFileKeyPrefix}${uri.toString()}`, undefined);
-	}
-}
-
-const contextKeyPrefix = 'github.context|';
-
-export class ContextStore<T> {
-	private _onDidChange = new EventEmitter<Uri>();
-	get onDidChange(): Event<Uri> {
-		return this._onDidChange.event;
-	}
-
-	constructor(private readonly memento: Memento, private readonly scheme: string) { }
-
-	delete(uri: Uri) {
-		return this.set(uri, undefined);
-	}
-
-	get(uri: Uri): T | undefined {
-		return this.memento.get<T>(`${contextKeyPrefix}${uri.toString()}`);
-	}
-
-	async set(uri: Uri, context: T | undefined) {
-		if (uri.scheme !== this.scheme) {
-			throw new Error(`Invalid context scheme: ${uri.scheme}`);
-		}
-
-		await this.memento.update(`${contextKeyPrefix}${uri.toString()}`, context);
-		this._onDidChange.fire(uri);
 	}
 }
