@@ -304,22 +304,24 @@ class InputRenderer implements ICompressibleTreeRenderer<ISCMInput, FuzzyScore, 
 			this.contentHeights.set(input, contentHeight);
 
 			if (lastContentHeight !== contentHeight) {
-				if (lastContentHeight !== undefined) {
-					this.updateHeight(input, contentHeight + 10);
-					templateData.inputWidget.layout();
-				} else if (contentHeight !== InputRenderer.DEFAULT_HEIGHT) {
-					// first time render, we must rerender on the next stack frame
-					const timeout = setTimeout(() => {
-						this.updateHeight(input, contentHeight + 10);
-						templateData.inputWidget.layout();
-					});
-					disposables.add({ dispose: () => clearTimeout(timeout) });
-				}
+				this.updateHeight(input, contentHeight + 10);
+				templateData.inputWidget.layout();
 			}
 		};
 
-		disposables.add(templateData.inputWidget.onDidChangeContentHeight(onDidChangeContentHeight));
-		onDidChangeContentHeight();
+		const initialRender = () => {
+			disposables.add(templateData.inputWidget.onDidChangeContentHeight(onDidChangeContentHeight));
+			onDidChangeContentHeight();
+		};
+
+		const contentHeight = templateData.inputWidget.getContentHeight();
+
+		if (contentHeight !== InputRenderer.DEFAULT_HEIGHT) {
+			const timeout = setTimeout(initialRender, 0);
+			disposables.add({ dispose: () => clearTimeout(timeout) });
+		} else {
+			initialRender();
+		}
 
 		// Layout the editor whenever the outer layout happens
 		const layoutEditor = () => templateData.inputWidget.layout();
@@ -855,6 +857,7 @@ class ViewModel {
 	private visibilityDisposables = new DisposableStore();
 	private scrollTop: number | undefined;
 	private firstVisible = true;
+	private repositoryCollapseStates: Map<ISCMRepository, boolean> | undefined;
 	private disposables = new DisposableStore();
 
 	constructor(
@@ -950,6 +953,7 @@ class ViewModel {
 			this.visibilityDisposables = new DisposableStore();
 			this.repositories.onDidSplice(this.onDidSpliceRepositories, this, this.visibilityDisposables);
 			this.onDidSpliceRepositories({ start: 0, deleteCount: 0, toInsert: this.repositories.elements });
+			this.repositoryCollapseStates = undefined;
 
 			if (typeof this.scrollTop === 'number') {
 				this.tree.scrollTop = this.scrollTop;
@@ -959,6 +963,14 @@ class ViewModel {
 			this.editorService.onDidActiveEditorChange(this.onDidActiveEditorChange, this, this.visibilityDisposables);
 			this.onDidActiveEditorChange();
 		} else {
+			if (this.items.length > 1) {
+				this.repositoryCollapseStates = new Map();
+
+				for (const item of this.items) {
+					this.repositoryCollapseStates.set(item.element, this.tree.isCollapsed(item.element));
+				}
+			}
+
 			this.visibilityDisposables.dispose();
 			this.onDidSpliceRepositories({ start: 0, deleteCount: this.items.length, toInsert: [] });
 			this.scrollTop = this.tree.scrollTop;
@@ -988,7 +1000,8 @@ class ViewModel {
 				children.push(...item.groupItems.map(i => this.render(i)));
 			}
 
-			return { element: item.element, children, incompressible: true, collapsible: hasSomeChanges };
+			const collapsed = this.repositoryCollapseStates?.get(item.element) ?? false;
+			return { element: item.element, children, incompressible: true, collapsed, collapsible: hasSomeChanges };
 		} else {
 			const children = this.mode === ViewModelMode.List
 				? Iterable.map(item.resources, element => ({ element, incompressible: true }))
