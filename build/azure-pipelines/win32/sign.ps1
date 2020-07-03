@@ -4,6 +4,8 @@ function Create-TmpJson($Obj) {
 	return $FileName
 }
 
+$File = $args[0]
+
 $Auth = Create-TmpJson @{
 	Version = "1.0.0"
 	AuthenticationType = "AAD_CERT"
@@ -31,7 +33,7 @@ $Input = Create-TmpJson @{
 			SourceLocationType = "UNC"
 			SignRequestFiles = @(
 				@{
-					SourceLocation = $args[0]
+					SourceLocation = $File
 				}
 			)
 			SigningInfo = @{
@@ -64,6 +66,11 @@ $Input = Create-TmpJson @{
 		}
 	)
 }
+
+# https://github.com/microsoft/vscode/issues/73805
+$Repo = "$env:BUILD_SOURCESDIRECTORY"
+$ProductName = (Get-Content "$Repo\product.json" | ConvertFrom-Json).nameLong
+& "$Repo\node_modules\rcedit\bin\rcedit.exe" $File --set-version-string "ProductName" "$ProductName"
 
 $Output = [System.IO.Path]::GetTempFileName()
 $ScriptPath = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
