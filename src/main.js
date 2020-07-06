@@ -211,6 +211,8 @@ function configureCommandlineSwitchesSync(cliArgs) {
 	];
 
 	if (process.platform === 'linux') {
+
+		// Force enable screen readers on Linux via this flag
 		SUPPORTED_ELECTRON_SWITCHES.push('force-renderer-accessibility');
 	}
 
@@ -228,6 +230,7 @@ function configureCommandlineSwitchesSync(cliArgs) {
 
 		// Append Electron flags to Electron
 		if (SUPPORTED_ELECTRON_SWITCHES.indexOf(argvKey) !== -1) {
+
 			// Color profile
 			if (argvKey === 'force-color-profile') {
 				if (argvValue) {
