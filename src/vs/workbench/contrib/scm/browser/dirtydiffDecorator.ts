@@ -12,7 +12,6 @@ import { Event, Emitter } from 'vs/base/common/event';
 import * as ext from 'vs/workbench/common/contributions';
 import { CodeEditorWidget } from 'vs/editor/browser/widget/codeEditorWidget';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
-import { ITextModelService } from 'vs/editor/common/services/resolverService';
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IEditorWorkerService } from 'vs/editor/common/services/editorWorkerService';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
@@ -48,6 +47,7 @@ import { ISplice } from 'vs/base/common/sequence';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { INotificationService } from 'vs/platform/notification/common/notification';
 import { createStyleSheet } from 'vs/base/browser/dom';
+import { ITextFileService, ITextFileEditorModel } from 'vs/workbench/services/textfile/common/textfiles';
 
 class DiffActionRunner extends ActionRunner {
 
@@ -1012,11 +1012,13 @@ function createProviderComparer(uri: URI): (a: ISCMProvider, b: ISCMProvider) =>
 
 export class DirtyDiffModel extends Disposable {
 
-	private _originalModel: ITextModel | null = null;
-	get original(): ITextModel | null { return this._originalModel; }
-	get modified(): ITextModel | null { return this._editorModel; }
+	private _workbenchModel: ITextFileEditorModel;
+	private _originalModel: ITextFileEditorModel | null = null;
+	get original(): ITextModel | null { return this._originalModel?.textEditorModel || null; }
+	get modified(): ITextModel | null { return this._workbenchModel.textEditorModel; }
 
-	private diffDelayer: ThrottledDelayer<IChange[] | null> | null;
+	private disposed = false;
+	private diffDelayer = new ThrottledDelayer<IChange[] | null>(200);
 	private _originalURIPromise?: Promise<URI | null>;
 	private repositoryDisposables = new Set<IDisposable>();
 	private readonly originalModelDisposables = this._register(new DisposableStore());
@@ -1027,21 +1029,33 @@ export class DirtyDiffModel extends Disposable {
 	private _changes: IChange[] = [];
 	get changes(): IChange[] { return this._changes; }
 
-	private _editorModel: ITextModel | null;
-
 	constructor(
 		editorModel: ITextModel,
 		@ISCMService private readonly scmService: ISCMService,
 		@IEditorWorkerService private readonly editorWorkerService: IEditorWorkerService,
-		@ITextModelService private readonly textModelResolverService: ITextModelService
+		@ITextFileService private readonly textFileService: ITextFileService
 	) {
 		super();
-		this._editorModel = editorModel;
-		this.diffDelayer = new ThrottledDelayer<IChange[]>(200);
+
+		const workbenchModel = this.textFileService.files.get(editorModel.uri);
+
+		if (!workbenchModel) {
+			throw new Error('Workbench text model not found');
+		}
+
+		this._workbenchModel = workbenchModel;
 
 		this._register(editorModel.onDidChangeContent(() => this.triggerDiff()));
 		this._register(scmService.onDidAddRepository(this.onDidAddRepository, this));
 		scmService.repositories.forEach(r => this.onDidAddRepository(r));
+
+		this._register(this._workbenchModel.onDidChangeEncoding(() => {
+			console.log('did change encoding');
+			this.diffDelayer.cancel();
+			this._originalModel = null;
+			this._originalURIPromise = undefined;
+			this.triggerDiff();
+		}));
 
 		this.triggerDiff();
 	}
@@ -1062,18 +1076,18 @@ export class DirtyDiffModel extends Disposable {
 	}
 
 	private triggerDiff(): Promise<any> {
-		if (!this.diffDelayer) {
+		if (this.disposed) {
 			return Promise.resolve(null);
 		}
 
 		return this.diffDelayer
 			.trigger(() => this.diff())
 			.then((changes: IChange[] | null) => {
-				if (!this._editorModel || this._editorModel.isDisposed() || !this._originalModel || this._originalModel.isDisposed()) {
+				if (this.disposed || this._workbenchModel.isDisposed() || !this._originalModel || this._originalModel.isDisposed()) {
 					return; // disposed
 				}
 
-				if (this._originalModel.getValueLength() === 0) {
+				if (!this._originalModel.textEditorModel || this._originalModel.textEditorModel.getValueLength() === 0) {
 					changes = [];
 				}
 
@@ -1089,15 +1103,15 @@ export class DirtyDiffModel extends Disposable {
 
 	private diff(): Promise<IChange[] | null> {
 		return this.getOriginalURIPromise().then(originalURI => {
-			if (!this._editorModel || this._editorModel.isDisposed() || !originalURI) {
+			if (this.disposed || this._workbenchModel.isDisposed() || !originalURI) {
 				return Promise.resolve([]); // disposed
 			}
 
-			if (!this.editorWorkerService.canComputeDirtyDiff(originalURI, this._editorModel.uri)) {
+			if (!this.editorWorkerService.canComputeDirtyDiff(originalURI, this._workbenchModel.resource)) {
 				return Promise.resolve([]); // Files too large
 			}
 
-			return this.editorWorkerService.computeDirtyDiff(originalURI, this._editorModel.uri, false);
+			return this.editorWorkerService.computeDirtyDiff(originalURI, this._workbenchModel.resource, false);
 		});
 	}
 
@@ -1107,7 +1121,7 @@ export class DirtyDiffModel extends Disposable {
 		}
 
 		this._originalURIPromise = this.getOriginalResource().then(originalUri => {
-			if (!this._editorModel) { // disposed
+			if (this.disposed) {
 				return null;
 			}
 
@@ -1116,21 +1130,21 @@ export class DirtyDiffModel extends Disposable {
 				return null;
 			}
 
-			if (this._originalModel && this._originalModel.uri.toString() === originalUri.toString()) {
+			if (this._originalModel && this._originalModel.resource.toString() === originalUri.toString()) {
 				return originalUri;
 			}
 
-			return this.textModelResolverService.createModelReference(originalUri).then(ref => {
-				if (!this._editorModel) { // disposed
-					ref.dispose();
+			const encoding = this._workbenchModel.getEncoding();
+			console.log('resolve', originalUri.toString(), encoding);
+			return this.textFileService.files.resolve(originalUri, { encoding }).then(model => {
+				if (this.disposed) {
 					return null;
 				}
 
-				this._originalModel = ref.object.textEditorModel;
+				this._originalModel = model;
 
 				this.originalModelDisposables.clear();
-				this.originalModelDisposables.add(ref);
-				this.originalModelDisposables.add(ref.object.textEditorModel.onDidChangeContent(() => this.triggerDiff()));
+				this.originalModelDisposables.add(model.onDidChangeContent(() => this.triggerDiff()));
 
 				return originalUri;
 			}).catch(error => {
@@ -1144,11 +1158,11 @@ export class DirtyDiffModel extends Disposable {
 	}
 
 	private async getOriginalResource(): Promise<URI | null> {
-		if (!this._editorModel) {
+		if (this.disposed) {
 			return Promise.resolve(null);
 		}
 
-		const uri = this._editorModel.uri;
+		const uri = this._workbenchModel.resource;
 		const providers = this.scmService.repositories.map(r => r.provider);
 		const rootedProviders = providers.filter(p => !!p.rootUri);
 
@@ -1203,12 +1217,11 @@ export class DirtyDiffModel extends Disposable {
 	dispose(): void {
 		super.dispose();
 
-		this._editorModel = null;
-		this._originalModel = null;
+		this.disposed = true;
 
 		if (this.diffDelayer) {
 			this.diffDelayer.cancel();
-			this.diffDelayer = null;
+			this.diffDelayer.dispose();
 		}
 
 		this.repositoryDisposables.forEach(d => dispose(d));
