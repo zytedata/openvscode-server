@@ -2067,4 +2067,39 @@ declare module 'vscode' {
 	}
 
 	//#endregion
+
+	//#region https://github.com/microsoft/vscode/issues/101857
+
+	export interface ExtensionContext {
+
+		/**
+		 * The uri of a directory in which the extension can create log files.
+		 * The directory might not exist on disk and creation is up to the extension. However,
+		 * the parent directory is guaranteed to be existent.
+		 *
+		 * @see vscode.workspace.fs
+		 */
+		readonly logUri: Uri;
+
+		/**
+		 * The uri of a workspace specific directory in which the extension
+		 * can store private state. The directory might not exist on disk and creation is
+		 * up to the extension. However, the parent directory is guaranteed to be existent.
+		 *
+		 * Use [`workspaceState`](#ExtensionContext.workspaceState) or
+		 * [`globalState`](#ExtensionContext.globalState) to store key value data.
+		 */
+		readonly storageUri: Uri | undefined;
+
+		/**
+		 * The uri of a directory in which the extension can store global state.
+		 * The directory might not exist on disk and creation is
+		 * up to the extension. However, the parent directory is guaranteed to be existent.
+		 *
+		 * Use [`globalState`](#ExtensionContext.globalState) to store key value data.
+		 */
+		readonly globalStorageUri: Uri;
+	}
+
+	//#endregion
 }
