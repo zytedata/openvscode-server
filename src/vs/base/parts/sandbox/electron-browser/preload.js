@@ -7,7 +7,7 @@
 (function () {
 	'use strict';
 
-	const { ipcRenderer, webFrame } = require('electron');
+	const { ipcRenderer, webFrame, crashReporter } = require('electron');
 
 	// @ts-ignore
 	window.vscode = {
@@ -73,6 +73,22 @@
 			 */
 			setZoomLevel(level) {
 				webFrame.setZoomLevel(level);
+			}
+		},
+
+		/**
+		 * Support for methods of crashReporter type.
+		 *
+		 * @type {typeof import('../electron-sandbox/globals').crashReporter}
+		 */
+		crashReporter: {
+
+			/**
+			 * @param {string} key
+			 * @param {string} value
+			 */
+			addExtraParameter(key, value) {
+				crashReporter.addExtraParameter(key, value);
 			}
 		}
 	};

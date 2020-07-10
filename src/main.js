@@ -35,13 +35,13 @@ const args = parseCLIArgs();
 const userDataPath = getUserDataPath(args);
 app.setPath('userData', userDataPath);
 
-// Set temp directory based on crash-reporter-directory CLI argument
-// The crash reporter will store crashes in temp folder so we need
-// to change that location accordingly.
+// Configure static command line arguments
+const argvConfig = configureCommandlineSwitchesSync(args);
 
-// If a crash-reporter-directory is specified we setup the crash reporter
-// right from the beginning as early as possible to monitor all processes.
+// If a crash-reporter-directory is specified we store the crash reports
+// in the specified directory and don't upload them to the crash server.
 let crashReporterDirectory = args['crash-reporter-directory'];
+let submitURL = '';
 if (crashReporterDirectory) {
 	crashReporterDirectory = path.normalize(crashReporterDirectory);
 
@@ -61,26 +61,36 @@ if (crashReporterDirectory) {
 
 	// Crashes are stored in the crashDumps directory by default, so we
 	// need to change that directory to the provided one
-	console.log(`Found --crash-reporter-directory argument. Setting temp directory to be '${crashReporterDirectory}'`);
+	console.log(`Found --crash-reporter-directory argument. Setting crashDumps directory to be '${crashReporterDirectory}'`);
 	app.setPath('crashDumps', crashReporterDirectory);
+} else {
+	const appCenter = product.appCenter;
+	// Disable Appcenter crash reporting if
+	// * --crash-reporter-directory is specified
+	// * enable-crash-reporter runtime argument is set to 'false'
+	// * --disable-crash-reporter command line parameter is set
+	if (appCenter && argvConfig['enable-crash-reporter'] && !args['disable-crash-reporter']) {
+		const isWindows = (process.platform === 'win32');
+		const isLinux = (process.platform === 'linux');
+		const crashReporterId = argvConfig['crash-reporter-id'];
+		const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+		if (uuidPattern.test(crashReporterId)) {
+			submitURL = isWindows ? appCenter[process.arch === 'ia32' ? 'win32-ia32' : 'win32-x64'] : isLinux ? appCenter[`linux-x64`] : appCenter.darwin;
+			submitURL = submitURL.concat('&uid=', crashReporterId, '&iid=', crashReporterId, '&sid=', crashReporterId);
+			// Send the id for child node process that are explicitly starting crash reporter.
+			// For vscode this is ExtensionHost process currently.
+			process.argv.push('--crash-reporter-id', crashReporterId);
+		}
+	}
 }
 
 // Start crash reporter for all processes
-const productName = (product.crashReporter && product.crashReporter.productName) || product.nameShort;
-const companyName = (product.crashReporter && product.crashReporter.companyName) || 'Microsoft';
-const appCenter = product.appCenter;
-let submitURL = '';
-if (appCenter) {
-	const isWindows = (process.platform === 'win32');
-	const isMacintosh = (process.platform === 'darwin');
-	const isLinux = (process.platform === 'linux');
-	submitURL = isWindows ? appCenter[process.arch === 'ia32' ? 'win32-ia32' : 'win32-x64'] : isLinux ? appCenter[`linux-x64`] : appCenter.darwin;
-	//submitURL = submitURL.concat('&uid=', crashReporterId, '&iid=', crashReporterId, '&sid=', info.sessionId);
-}
+const productName = product.crashReporter?.productName || product.nameShort;
+const companyName = product.crashReporter?.companyName || 'Microsoft';
 crashReporter.start({
 	companyName: companyName,
 	productName: process.env['VSCODE_DEV'] ? `${productName} Dev` : productName,
-	submitURL: submitURL,
+	submitURL,
 	uploadToServer: !crashReporterDirectory
 });
 
@@ -121,9 +131,6 @@ registerListeners();
 
 // Cached data
 const nodeCachedDataDir = getNodeCachedDir();
-
-// Configure static command line arguments
-const argvConfig = configureCommandlineSwitchesSync(args);
 
 // Remove env set by snap https://github.com/microsoft/vscode/issues/85344
 if (process.env['SNAP']) {

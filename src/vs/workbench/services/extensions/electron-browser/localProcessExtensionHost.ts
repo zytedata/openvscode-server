@@ -6,6 +6,7 @@
 import * as nls from 'vs/nls';
 import { ChildProcess, fork } from 'child_process';
 import { Server, Socket, createServer } from 'net';
+import { CrashReporterStartOptions } from 'vs/base/parts/sandbox/common/electronTypes';
 import { getPathFromAmdModule } from 'vs/base/common/amd';
 import { timeout } from 'vs/base/common/async';
 import { toErrorMessage } from 'vs/base/common/errorMessage';
@@ -43,6 +44,7 @@ import { joinPath } from 'vs/base/common/resources';
 import { Registry } from 'vs/platform/registry/common/platform';
 import { IOutputChannelRegistry, Extensions } from 'vs/workbench/services/output/common/output';
 import { INativeWorkbenchEnvironmentService } from 'vs/workbench/services/environment/electron-browser/environmentService';
+import { isUUID } from 'vs/base/common/uuid';
 
 export interface ILocalProcessExtensionHostInitData {
 	readonly autoStart: boolean;
@@ -179,6 +181,25 @@ export class LocalProcessExtensionHost implements IExtensionHost {
 					];
 				} else {
 					opts.execArgv = ['--inspect-port=0'];
+				}
+
+				// On linux crash reporter needs to be started on child node processes explicitly
+				if (platform.isLinux) {
+					const crashReporterStartOptions: CrashReporterStartOptions = {
+						companyName: this._productService.crashReporter?.companyName || 'Microsoft',
+						productName: this._productService.crashReporter?.productName || this._productService.nameShort,
+						submitURL: '',
+						uploadToServer: false
+					};
+					const crashReporterId = this._environmentService.crashReporterId; // crashReporterId is set by the main process only when crash reporting is enabled by the user.
+					const appcenter = this._productService.appCenter;
+					const uploadCrashesToServer = !this._environmentService.crashReporterDirectory; // only upload unless --crash-reporter-directory is provided
+					if (uploadCrashesToServer && appcenter && crashReporterId && isUUID(crashReporterId)) {
+						const submitURL = appcenter[`linux-x64`];
+						crashReporterStartOptions.submitURL = submitURL.concat('&uid=', crashReporterId, '&iid=', crashReporterId, '&sid=', crashReporterId);
+						crashReporterStartOptions.uploadToServer = true;
+					}
+					opts.env.CRASH_REPORTER_START_OPTIONS = JSON.stringify(crashReporterStartOptions);
 				}
 
 				// Run Extension Host as fork of current process
