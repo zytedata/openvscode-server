@@ -324,17 +324,17 @@ export interface IUserDataSynchroniser {
 
 	pull(): Promise<void>;
 	push(): Promise<void>;
-	sync(manifest: IUserDataManifest | null, headers?: IHeaders): Promise<void>;
+	sync(manifest: IUserDataManifest | null, headers: IHeaders): Promise<void>;
 	replace(uri: URI): Promise<boolean>;
 	stop(): Promise<void>;
 
-	generateSyncResourcePreview(): Promise<ISyncResourcePreview | null>
-	hasPreviouslySynced(): Promise<boolean>
+	generateSyncResourcePreview(): Promise<ISyncResourcePreview | null>;
+	hasPreviouslySynced(): Promise<boolean>;
 	hasLocalData(): Promise<boolean>;
 	resetLocal(): Promise<void>;
 
 	resolveContent(resource: URI): Promise<string | null>;
-	acceptPreviewContent(resource: URI, content: string): Promise<void>;
+	acceptPreviewContent(resource: URI, content: string, force: boolean, headers: IHeaders): Promise<ISyncResourcePreview | null>;
 
 	getRemoteSyncResourceHandles(): Promise<ISyncResourceHandle[]>;
 	getLocalSyncResourceHandles(): Promise<ISyncResourceHandle[]>;
@@ -358,7 +358,7 @@ export interface IUserDataSyncResourceEnablementService {
 export type SyncResourceConflicts = { syncResource: SyncResource, conflicts: IResourcePreview[] };
 
 export interface ISyncTask {
-	manifest: IUserDataManifest | null;
+	readonly manifest: IUserDataManifest | null;
 	run(): Promise<void>;
 	stop(): Promise<void>;
 }
