@@ -304,7 +304,6 @@ export interface IResourcePreview {
 	readonly previewResource: URI;
 	readonly localChange: Change;
 	readonly remoteChange: Change;
-
 }
 
 export interface ISyncResourcePreview {
@@ -358,21 +357,21 @@ export interface IUserDataSyncResourceEnablementService {
 	setResourceEnablement(resource: SyncResource, enabled: boolean): void;
 }
 
-export type SyncResourceConflicts = { syncResource: SyncResource, conflicts: IResourcePreview[] };
-
 export interface ISyncTask {
 	readonly manifest: IUserDataManifest | null;
 	run(): Promise<void>;
 	stop(): Promise<void>;
 }
 
-export interface IManualSyncTask {
+export interface IManualSyncTask extends IDisposable {
+	readonly id: string;
 	readonly manifest: IUserDataManifest | null;
+	readonly onSynchronizeResources: Event<[SyncResource, URI[]][]>;
 	preview(): Promise<[SyncResource, ISyncResourcePreview][]>;
-	merge(): Promise<[SyncResource, ISyncResourcePreview][]>;
+	accept(uri: URI, content: string): Promise<[SyncResource, ISyncResourcePreview][]>;
+	merge(uri?: URI): Promise<[SyncResource, ISyncResourcePreview][]>;
 	pull(): Promise<void>;
 	push(): Promise<void>;
-	accept(uri: URI, content: string): Promise<[SyncResource, ISyncResourcePreview][]>;
 	stop(): Promise<void>;
 }
 
@@ -382,10 +381,9 @@ export interface IUserDataSyncService {
 
 	readonly status: SyncStatus;
 	readonly onDidChangeStatus: Event<SyncStatus>;
-	readonly onSynchronizeResource: Event<SyncResource>;
 
-	readonly conflicts: SyncResourceConflicts[];
-	readonly onDidChangeConflicts: Event<SyncResourceConflicts[]>;
+	readonly conflicts: [SyncResource, IResourcePreview[]][];
+	readonly onDidChangeConflicts: Event<[SyncResource, IResourcePreview[]][]>;
 
 	readonly onDidChangeLocal: Event<SyncResource>;
 	readonly onSyncErrors: Event<[SyncResource, UserDataSyncError][]>;
@@ -402,7 +400,6 @@ export interface IUserDataSyncService {
 	resetLocal(): Promise<void>;
 
 	hasLocalData(): Promise<boolean>;
-	isFirstTimeSyncingWithAnotherMachine(): Promise<boolean>;
 	hasPreviouslySynced(): Promise<boolean>;
 	resolveContent(resource: URI): Promise<string | null>;
 	acceptPreviewContent(resource: SyncResource, conflictResource: URI, content: string): Promise<void>;
@@ -416,13 +413,11 @@ export interface IUserDataSyncService {
 export const IUserDataAutoSyncService = createDecorator<IUserDataAutoSyncService>('IUserDataAutoSyncService');
 export interface IUserDataAutoSyncService {
 	_serviceBrand: any;
-	readonly onTurnOnSync: Event<void>
-	readonly onDidTurnOnSync: Event<UserDataSyncError | undefined>
 	readonly onError: Event<UserDataSyncError>;
 	readonly onDidChangeEnablement: Event<boolean>;
 	isEnabled(): boolean;
 	canToggleEnablement(): boolean;
-	turnOn(pullFirst: boolean): Promise<void>;
+	turnOn(): Promise<void>;
 	turnOff(everywhere: boolean): Promise<void>;
 	triggerSync(sources: string[], hasToLimitSync: boolean): Promise<void>;
 }
