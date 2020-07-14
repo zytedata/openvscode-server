@@ -2480,6 +2480,10 @@ export class CommandCenter {
 				const outputChannel = this.outputChannel as OutputChannel;
 				choices.set(openOutputChannelChoice, () => outputChannel.show());
 
+				if (err.gitCommand === 'push' && err.gitErrorCode === GitErrorCodes.PermissionDenied) {
+					// do something here
+				}
+
 				switch (err.gitErrorCode) {
 					case GitErrorCodes.DirtyWorkTree:
 						message = localize('clean repo', "Please clean your repository working tree before checkout.");
