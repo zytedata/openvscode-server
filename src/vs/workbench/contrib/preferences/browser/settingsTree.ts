@@ -365,7 +365,7 @@ interface IDisposableTemplate {
 	toDispose: DisposableStore;
 }
 
-interface ISettingItemTemplate<T = any> extends IDisposableTemplate {
+export interface ISettingItemTemplate<T = any> extends IDisposableTemplate {
 	onChange?: (value: T) => void;
 
 	context?: SettingsTreeSettingElement;
