@@ -318,17 +318,12 @@ class InputRenderer implements ICompressibleTreeRenderer<ISCMInput, FuzzyScore, 
 
 		const startListeningContentHeightChange = () => {
 			disposables.add(templateData.inputWidget.onDidChangeContentHeight(onDidChangeContentHeight));
-
-			const contentHeight = templateData.inputWidget.getContentHeight();
-
-			if (contentHeight !== InputRenderer.DEFAULT_HEIGHT) {
-				onDidChangeContentHeight();
-			}
+			onDidChangeContentHeight();
 		};
 
 		// Setup height change listener on next tick
-		const timeout = setTimeout(startListeningContentHeightChange, 0);
-		disposables.add({ dispose: () => clearTimeout(timeout) });
+		const timeout = disposableTimeout(startListeningContentHeightChange, 0);
+		disposables.add(timeout);
 
 		// Layout the editor whenever the outer layout happens
 		const layoutEditor = () => templateData.inputWidget.layout();
