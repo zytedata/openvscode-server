@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { IUserDataSyncStoreService, SyncResource, SyncStatus, IUserDataSyncResourceEnablementService, IRemoteUserData, ISyncData, Change, USER_DATA_SYNC_SCHEME, IUserDataManifest } from 'vs/platform/userDataSync/common/userDataSync';
+import { IUserDataSyncStoreService, SyncResource, SyncStatus, IUserDataSyncResourceEnablementService, IRemoteUserData, ISyncData, Change, USER_DATA_SYNC_SCHEME, IUserDataManifest, MergeState } from 'vs/platform/userDataSync/common/userDataSync';
 import { UserDataSyncClient, UserDataSyncTestServer } from 'vs/platform/userDataSync/test/common/userDataSyncClient';
 import { DisposableStore, toDisposable } from 'vs/base/common/lifecycle';
 import { AbstractSynchroniser, IResourcePreview } from 'vs/platform/userDataSync/common/abstractSynchronizer';
@@ -276,16 +276,59 @@ suite('TestSynchronizer', () => {
 		assertConflicts(testObject.conflicts, []);
 	});
 
-	test('preview: status is set to idle after merging if there are no conflicts', async () => {
+	test('preview: status is syncing after merging if there are no conflicts', async () => {
 		const testObject: TestSynchroniser = client.instantiationService.createInstance(TestSynchroniser, SyncResource.Settings);
 		testObject.syncResult = { hasConflicts: false, hasError: false };
 		testObject.syncBarrier.open();
 
 		let preview = await testObject.preview(await client.manifest());
-		preview = await testObject.merge(preview!.resourcePreviews[0].previewResource, false);
+		preview = await testObject.merge(preview!.resourcePreviews[0].previewResource);
+
+		assert.deepEqual(testObject.status, SyncStatus.Syncing);
+		assertPreviews(preview!.resourcePreviews, [resource]);
+		assert.equal(preview!.resourcePreviews[0].mergeState, MergeState.Accepted);
+		assertConflicts(testObject.conflicts, []);
+	});
+
+	test('preview: status is set to idle after merging and applying if there are no conflicts', async () => {
+		const testObject: TestSynchroniser = client.instantiationService.createInstance(TestSynchroniser, SyncResource.Settings);
+		testObject.syncResult = { hasConflicts: false, hasError: false };
+		testObject.syncBarrier.open();
+
+		let preview = await testObject.preview(await client.manifest());
+		preview = await testObject.merge(preview!.resourcePreviews[0].previewResource);
+		preview = await testObject.apply(false);
 
 		assert.deepEqual(testObject.status, SyncStatus.Idle);
 		assert.equal(preview, null);
+		assertConflicts(testObject.conflicts, []);
+	});
+
+	test('preview: discarding the merge', async () => {
+		const testObject: TestSynchroniser = client.instantiationService.createInstance(TestSynchroniser, SyncResource.Settings);
+		testObject.syncResult = { hasConflicts: false, hasError: false };
+		testObject.syncBarrier.open();
+
+		let preview = await testObject.preview(await client.manifest());
+		preview = await testObject.merge(preview!.resourcePreviews[0].previewResource);
+		preview = await testObject.discard(preview!.resourcePreviews[0].previewResource);
+
+		assert.deepEqual(testObject.status, SyncStatus.Syncing);
+		assertPreviews(preview!.resourcePreviews, [resource]);
+		assert.equal(preview!.resourcePreviews[0].mergeState, MergeState.Preview);
+		assertConflicts(testObject.conflicts, []);
+	});
+
+	test('preview: status is syncing after accepting when there are no conflicts', async () => {
+		const testObject: TestSynchroniser = client.instantiationService.createInstance(TestSynchroniser, SyncResource.Settings);
+		testObject.syncResult = { hasConflicts: false, hasError: false };
+		testObject.syncBarrier.open();
+
+		let preview = await testObject.preview(await client.manifest());
+		preview = await testObject.accept(preview!.resourcePreviews[0].previewResource, preview!.resourcePreviews[0].previewContent!);
+
+		assert.deepEqual(testObject.status, SyncStatus.Syncing);
+		assertPreviews(preview!.resourcePreviews, [resource]);
 		assertConflicts(testObject.conflicts, []);
 	});
 
@@ -295,7 +338,8 @@ suite('TestSynchronizer', () => {
 		testObject.syncBarrier.open();
 
 		let preview = await testObject.preview(await client.manifest());
-		preview = await testObject.acceptPreviewContent(preview!.resourcePreviews[0].previewResource, preview!.resourcePreviews[0].previewContent!, false);
+		preview = await testObject.accept(preview!.resourcePreviews[0].previewResource, preview!.resourcePreviews[0].previewContent!);
+		preview = await testObject.apply(false);
 
 		assert.deepEqual(testObject.status, SyncStatus.Idle);
 		assert.equal(preview, null);
@@ -320,11 +364,41 @@ suite('TestSynchronizer', () => {
 		testObject.syncBarrier.open();
 
 		const preview = await testObject.preview(await client.manifest());
-		await testObject.merge(preview!.resourcePreviews[0].previewResource, false);
+		await testObject.merge(preview!.resourcePreviews[0].previewResource);
 
 		assert.deepEqual(testObject.status, SyncStatus.HasConflicts);
 		assertPreviews(preview!.resourcePreviews, [resource]);
+		assert.equal(preview!.resourcePreviews[0].mergeState, MergeState.Conflict);
 		assertConflicts(testObject.conflicts, [preview!.resourcePreviews[0].previewResource]);
+	});
+
+	test('preview: discarding the conflict', async () => {
+		const testObject: TestSynchroniser = client.instantiationService.createInstance(TestSynchroniser, SyncResource.Settings);
+		testObject.syncResult = { hasConflicts: true, hasError: false };
+		testObject.syncBarrier.open();
+
+		const preview = await testObject.preview(await client.manifest());
+		await testObject.merge(preview!.resourcePreviews[0].previewResource);
+		await testObject.discard(preview!.resourcePreviews[0].previewResource);
+
+		assert.deepEqual(testObject.status, SyncStatus.Syncing);
+		assertPreviews(preview!.resourcePreviews, [resource]);
+		assert.equal(preview!.resourcePreviews[0].mergeState, MergeState.Preview);
+		assertConflicts(testObject.conflicts, []);
+	});
+
+	test('preview: status is syncing after accepting when there are conflicts', async () => {
+		const testObject: TestSynchroniser = client.instantiationService.createInstance(TestSynchroniser, SyncResource.Settings);
+		testObject.syncResult = { hasConflicts: true, hasError: false };
+		testObject.syncBarrier.open();
+
+		let preview = await testObject.preview(await client.manifest());
+		await testObject.merge(preview!.resourcePreviews[0].previewResource);
+		preview = await testObject.accept(preview!.resourcePreviews[0].previewResource, preview!.resourcePreviews[0].previewContent!);
+
+		assert.deepEqual(testObject.status, SyncStatus.Syncing);
+		assertPreviews(preview!.resourcePreviews, [resource]);
+		assert.deepEqual(testObject.conflicts, []);
 	});
 
 	test('preview: status is set to idle and sync is applied after accepting when there are conflicts', async () => {
@@ -333,11 +407,25 @@ suite('TestSynchronizer', () => {
 		testObject.syncBarrier.open();
 
 		let preview = await testObject.preview(await client.manifest());
-		await testObject.merge(preview!.resourcePreviews[0].previewResource, false);
-		preview = await testObject.acceptPreviewContent(preview!.resourcePreviews[0].previewResource, preview!.resourcePreviews[0].previewContent!, false);
+		await testObject.merge(preview!.resourcePreviews[0].previewResource);
+		preview = await testObject.accept(preview!.resourcePreviews[0].previewResource, preview!.resourcePreviews[0].previewContent!);
+		preview = await testObject.apply(false);
 
 		assert.deepEqual(testObject.status, SyncStatus.Idle);
 		assert.equal(preview, null);
+		assertConflicts(testObject.conflicts, []);
+	});
+
+	test('preview: status is set to syncing after accepting when there are conflicts before merging', async () => {
+		const testObject: TestSynchroniser = client.instantiationService.createInstance(TestSynchroniser, SyncResource.Settings);
+		testObject.syncResult = { hasConflicts: true, hasError: false };
+		testObject.syncBarrier.open();
+
+		let preview = await testObject.preview(await client.manifest());
+		preview = await testObject.accept(preview!.resourcePreviews[0].previewResource, preview!.resourcePreviews[0].previewContent!);
+
+		assert.deepEqual(testObject.status, SyncStatus.Syncing);
+		assertPreviews(preview!.resourcePreviews, [resource]);
 		assertConflicts(testObject.conflicts, []);
 	});
 
@@ -347,7 +435,8 @@ suite('TestSynchronizer', () => {
 		testObject.syncBarrier.open();
 
 		let preview = await testObject.preview(await client.manifest());
-		preview = await testObject.acceptPreviewContent(preview!.resourcePreviews[0].previewResource, preview!.resourcePreviews[0].previewContent!, false);
+		preview = await testObject.accept(preview!.resourcePreviews[0].previewResource, preview!.resourcePreviews[0].previewContent!);
+		preview = await testObject.apply(false);
 
 		assert.deepEqual(testObject.status, SyncStatus.Idle);
 		assert.equal(preview, null);
