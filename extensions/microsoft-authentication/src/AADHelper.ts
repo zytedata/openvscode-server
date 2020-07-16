@@ -3,16 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as createHash from 'create-hash';
 import * as randomBytes from 'randombytes';
 import * as querystring from 'querystring';
 import * as vscode from 'vscode';
-import { createServer, startServer } from './authServer';
+import { createServer, startServer } from '@env/authServer';
+
 import { v4 as uuid } from 'uuid';
 import { keychain } from './keychain';
 import Logger from './logger';
 import { toBase64UrlEncoding } from './utils';
 import fetch from 'node-fetch';
+import { sha256 } from '@env/sha256';
 
 const redirectUrl = 'https://vscode-redirect.azurewebsites.net/';
 const loginEndpointUrl = 'https://login.microsoftonline.com/';
@@ -290,7 +291,7 @@ export class AzureActiveDirectoryService {
 				const state = `${updatedPort},${encodeURIComponent(nonce)}`;
 
 				const codeVerifier = toBase64UrlEncoding(randomBytes(32).toString('base64'));
-				const codeChallenge = toBase64UrlEncoding(createHash('sha256').update(codeVerifier).digest('base64'));
+				const codeChallenge = toBase64UrlEncoding(await sha256(codeVerifier));
 				const loginUrl = `${loginEndpointUrl}${tenant}/oauth2/v2.0/authorize?response_type=code&response_mode=query&client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUrl)}&state=${state}&scope=${encodeURIComponent(scope)}&prompt=select_account&code_challenge_method=S256&code_challenge=${codeChallenge}`;
 
 				await redirectReq.res.writeHead(302, { Location: loginUrl });
@@ -358,7 +359,7 @@ export class AzureActiveDirectoryService {
 		const signInUrl = `${loginEndpointUrl}${tenant}/oauth2/v2.0/authorize`;
 		let uri = vscode.Uri.parse(signInUrl);
 		const codeVerifier = toBase64UrlEncoding(randomBytes(32).toString('base64'));
-		const codeChallenge = toBase64UrlEncoding(createHash('sha256').update(codeVerifier).digest('base64'));
+		const codeChallenge = toBase64UrlEncoding(await sha256(codeVerifier));
 		uri = uri.with({
 			query: `response_type=code&client_id=${encodeURIComponent(clientId)}&response_mode=query&redirect_uri=${redirectUrl}&state=${state}&scope=${scope}&prompt=select_account&code_challenge_method=S256&code_challenge=${codeChallenge}`
 		});

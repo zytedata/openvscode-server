@@ -1,13 +1,9 @@
 {
-	"extends": "../shared.tsconfig.json",
+	"extends": "./tsconfig.base.json",
 	"compilerOptions": {
-		"outDir": "./out",
-		"experimentalDecorators": true,
-		"typeRoots": [
-			"./node_modules/@types"
-		]
+		"paths": {
+			"@env/*": ["src/env/node/*"]
+		}
 	},
-	"include": [
-		"src/**/*"
-	]
+	"exclude": ["node_modules", "**/env/browser/**/*"]
 }
