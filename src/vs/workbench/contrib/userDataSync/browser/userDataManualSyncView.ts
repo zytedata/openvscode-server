@@ -62,6 +62,7 @@ export class UserDataManualSyncViewPane extends TreeViewPane {
 
 		this._register(this.userDataSyncPreview.onDidChangeResources(() => this.updateSyncButtonEnablement()));
 		this._register(this.userDataSyncPreview.onDidChangeResources(() => this.treeView.refresh()));
+		this._register(this.userDataSyncPreview.onDidChangeResources(() => this.closeConflictEditors()));
 		this._register(decorationsService.registerDecorationsProvider(this._register(new UserDataSyncResourcesDecorationProvider(this.userDataSyncPreview))));
 
 		this.registerActions();
@@ -73,7 +74,7 @@ export class UserDataManualSyncViewPane extends TreeViewPane {
 		this.buttonsContainer = DOM.append(container, DOM.$('.manual-sync-buttons-container'));
 
 		this.syncButton = this._register(new Button(this.buttonsContainer));
-		this.syncButton.label = localize('accept', "Sync");
+		this.syncButton.label = localize('turn on sync', "Turn on Preferences Sync");
 		this.updateSyncButtonEnablement();
 		this._register(attachButtonStyler(this.syncButton, this.themeService));
 		this._register(this.syncButton.onDidClick(() => this.apply()));
@@ -81,7 +82,7 @@ export class UserDataManualSyncViewPane extends TreeViewPane {
 		const cancelButton = this._register(new Button(this.buttonsContainer));
 		cancelButton.label = localize('cancel', "Cancel");
 		this._register(attachButtonStyler(cancelButton, this.themeService));
-		this._register(cancelButton.onDidClick(() => this.userDataSyncPreview.cancel()));
+		this._register(cancelButton.onDidClick(() => this.cancel()));
 
 		this.treeView.dataProvider = new ManualSyncViewDataProvider(this.userDataSyncPreview);
 	}
@@ -110,7 +111,7 @@ export class UserDataManualSyncViewPane extends TreeViewPane {
 					icon: Codicon.cloudDownload,
 					menu: {
 						id: MenuId.ViewItemContext,
-						when: ContextKeyExpr.and(ContextKeyEqualsExpr.create('view', MANUAL_SYNC_VIEW_ID), ContextKeyExpr.or(ContextKeyExpr.equals('viewItem', 'sync-resource-preview'), ContextKeyExpr.equals('viewItem', 'sync-resource-conflict'))),
+						when: ContextKeyExpr.and(ContextKeyEqualsExpr.create('view', MANUAL_SYNC_VIEW_ID), ContextKeyExpr.equals('viewItem', 'sync-resource-preview')),
 						group: 'inline',
 						order: 1,
 					},
@@ -130,7 +131,7 @@ export class UserDataManualSyncViewPane extends TreeViewPane {
 					icon: Codicon.cloudUpload,
 					menu: {
 						id: MenuId.ViewItemContext,
-						when: ContextKeyExpr.and(ContextKeyEqualsExpr.create('view', MANUAL_SYNC_VIEW_ID), ContextKeyExpr.or(ContextKeyExpr.equals('viewItem', 'sync-resource-preview'), ContextKeyExpr.equals('viewItem', 'sync-resource-conflict'))),
+						when: ContextKeyExpr.and(ContextKeyEqualsExpr.create('view', MANUAL_SYNC_VIEW_ID), ContextKeyExpr.equals('viewItem', 'sync-resource-preview')),
 						group: 'inline',
 						order: 2,
 					},
@@ -222,22 +223,39 @@ export class UserDataManualSyncViewPane extends TreeViewPane {
 	}
 
 	private async apply(): Promise<void> {
-		for (const resource of this.userDataSyncPreview.resources) {
-			if (resource.syncResource === SyncResource.GlobalState) {
-				await this.mergeResource(resource);
+		this.syncButton.label = localize('turning on', "Turning on...");
+		this.syncButton.enabled = false;
+		return this.withProgress(async () => {
+			for (const resource of this.userDataSyncPreview.resources) {
+				if (resource.syncResource === SyncResource.GlobalState) {
+					await this.userDataSyncPreview.merge(resource.merged);
+				} else {
+					this.close(resource);
+				}
 			}
+			await this.userDataSyncPreview.apply();
+		});
+	}
+
+	private async cancel(): Promise<void> {
+		for (const resource of this.userDataSyncPreview.resources) {
+			this.close(resource);
 		}
-		await this.userDataSyncPreview.apply();
+		await this.userDataSyncPreview.cancel();
 	}
 
 	private async open(previewResource: IUserDataSyncResource): Promise<void> {
 		if (previewResource.mergeState === MergeState.Accepted) {
-			await this.editorService.openEditor({ resource: previewResource.accepted, label: localize('preview', "{0} (Preview)", basename(previewResource.accepted)) });
+			if (previewResource.localChange !== Change.Deleted && previewResource.remoteChange !== Change.Deleted) {
+				// Do not open deleted preview
+				await this.editorService.openEditor({ resource: previewResource.accepted, label: localize('preview', "{0} (Preview)", basename(previewResource.accepted)) });
+			}
 		} else {
 			const leftResource = previewResource.remote;
 			const rightResource = previewResource.mergeState === MergeState.Conflict ? previewResource.merged : previewResource.local;
 			const leftResourceName = localize({ key: 'leftResourceName', comment: ['remote as in file in cloud'] }, "{0} (Remote)", basename(leftResource));
-			const rightResourceName = localize({ key: 'rightResourceName', comment: ['local as in file in disk'] }, "{0} (Local)", basename(rightResource));
+			const rightResourceName = previewResource.mergeState === MergeState.Conflict ? localize('merge preview', "{0} (Merge Preview)", basename(rightResource))
+				: localize({ key: 'rightResourceName', comment: ['local as in file in disk'] }, "{0} (Local)", basename(rightResource));
 			await this.editorService.openEditor({
 				leftResource,
 				rightResource,
@@ -273,6 +291,20 @@ export class UserDataManualSyncViewPane extends TreeViewPane {
 		}
 	}
 
+	private closeConflictEditors() {
+		for (const previewResource of this.userDataSyncPreview.resources) {
+			if (previewResource.mergeState !== MergeState.Conflict) {
+				for (const input of this.editorService.editors) {
+					if (input instanceof DiffEditorInput) {
+						if (isEqual(previewResource.remote, input.secondary.resource) && isEqual(previewResource.merged, input.primary.resource)) {
+							input.dispose();
+						}
+					}
+				}
+			}
+		}
+	}
+
 	private withProgress(task: () => Promise<void>): Promise<void> {
 		return this.progressService.withProgress({ location: MANUAL_SYNC_VIEW_ID, delay: 500 }, task);
 	}
@@ -294,6 +326,7 @@ class ManualSyncViewDataProvider implements ITreeViewDataProvider {
 				roots.push({
 					handle,
 					resourceUri: resource.remote,
+					label: { label: basename(resource.remote), strikethrough: resource.mergeState === MergeState.Accepted && (resource.localChange === Change.Deleted || resource.remoteChange === Change.Deleted) },
 					description: getSyncAreaLabel(resource.syncResource),
 					collapsibleState: TreeItemCollapsibleState.None,
 					command: { id: `workbench.actions.sync.showChanges`, title: '', arguments: [<TreeViewItemHandleArg>{ $treeViewId: '', $treeItemHandle: handle }] },
@@ -337,9 +370,9 @@ class UserDataSyncResourcesDecorationProvider extends Disposable implements IDec
 		if (userDataSyncResource) {
 			switch (userDataSyncResource.mergeState) {
 				case MergeState.Conflict:
-					return { letter: '⚠', color: listWarningForeground };
+					return { letter: '⚠', color: listWarningForeground, tooltip: localize('conflict', "Conflicts Detected") };
 				case MergeState.Accepted:
-					return { letter: '✓', color: listDeemphasizedForeground };
+					return { letter: '✓', color: listDeemphasizedForeground, tooltip: localize('accepted', "Accepted") };
 			}
 		}
 		return undefined;
