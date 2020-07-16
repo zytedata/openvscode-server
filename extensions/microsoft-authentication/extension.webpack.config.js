@@ -17,10 +17,5 @@ module.exports = withDefaults({
 	},
 	externals: {
 		'keytar': 'commonjs keytar'
-	},
-	resolve: {
-		alias: {
-			'@env': path.resolve(__dirname, 'src/env/node')
-		}
 	}
 });

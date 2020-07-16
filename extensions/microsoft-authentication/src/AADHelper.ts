@@ -6,14 +6,14 @@
 import * as randomBytes from 'randombytes';
 import * as querystring from 'querystring';
 import * as vscode from 'vscode';
-import { createServer, startServer } from '@env/authServer';
+import { createServer, startServer } from './env/node/authServer';
 
 import { v4 as uuid } from 'uuid';
 import { keychain } from './keychain';
 import Logger from './logger';
 import { toBase64UrlEncoding } from './utils';
 import fetch from 'node-fetch';
-import { sha256 } from '@env/sha256';
+import { sha256 } from './env/node/sha256';
 
 const redirectUrl = 'https://vscode-redirect.azurewebsites.net/';
 const loginEndpointUrl = 'https://login.microsoftonline.com/';
