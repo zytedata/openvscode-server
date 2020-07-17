@@ -22,6 +22,7 @@ import { ITelemetryData, ITelemetryService } from 'vs/platform/telemetry/common/
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import { INativeEnvironmentService } from 'vs/platform/environment/node/environmentService';
 import { MouseInputEvent } from 'vs/base/parts/sandbox/common/electronTypes';
+import { totalmem } from 'os';
 
 export interface IElectronMainService extends AddFirstParameterToFunctions<ICommonElectronService, Promise<unknown> /* only methods, not events */, number | undefined /* window ID */> { }
 
@@ -309,6 +310,19 @@ export class ElectronMainService implements IElectronMainService {
 		}
 
 		return isAdmin;
+	}
+
+	async getTotalMem(): Promise<number> {
+		return totalmem();
+	}
+
+	//#endregion
+
+
+	//#region Process
+
+	async killProcess(windowId: number | undefined, pid: number, code: string): Promise<void> {
+		process.kill(pid, code);
 	}
 
 	//#endregion
