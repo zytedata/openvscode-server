@@ -1594,6 +1594,11 @@ declare module 'vscode' {
 		readonly onDidDispose: Event<void>;
 
 		/**
+		 * Active kernel used in the editor
+		 */
+		readonly kernel?: NotebookKernel;
+
+		/**
 		 * Fired when the output hosting webview posts a message.
 		 */
 		readonly onDidReceiveMessage: Event<any>;
@@ -1822,6 +1827,7 @@ declare module 'vscode' {
 	}
 
 	export interface NotebookKernel {
+		readonly id: string;
 		label: string;
 		description?: string;
 		isPreferred?: boolean;
@@ -1890,8 +1896,7 @@ declare module 'vscode' {
 		 */
 		export function createConcatTextDocument(notebook: NotebookDocument, selector?: DocumentSelector): NotebookConcatTextDocument;
 
-		export let activeNotebookKernel: NotebookKernel | undefined;
-		export const onDidChangeActiveNotebookKernel: Event<void>;
+		export const onDidChangeActiveNotebookKernel: Event<{ document: NotebookDocument, kernel: NotebookKernel | undefined }>;
 	}
 
 	//#endregion
