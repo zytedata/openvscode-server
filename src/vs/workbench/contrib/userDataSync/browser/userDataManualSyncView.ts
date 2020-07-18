@@ -13,8 +13,8 @@ import { registerAction2, Action2, MenuId } from 'vs/platform/actions/common/act
 import { ContextKeyExpr, ContextKeyEqualsExpr, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 import { URI } from 'vs/base/common/uri';
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
-import { Emitter } from 'vs/base/common/event';
-import { Disposable } from 'vs/base/common/lifecycle';
+import { Emitter, Event } from 'vs/base/common/event';
+import { Disposable, dispose } from 'vs/base/common/lifecycle';
 import { Codicon } from 'vs/base/common/codicons';
 import { IUserDataSyncWorkbenchService, getSyncAreaLabel, IUserDataSyncPreview, IUserDataSyncResource, MANUAL_SYNC_VIEW_ID } from 'vs/workbench/services/userDataSync/common/userDataSync';
 import { isEqual, basename } from 'vs/base/common/resources';
@@ -32,6 +32,11 @@ import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { attachButtonStyler } from 'vs/platform/theme/common/styler';
 import { DiffEditorInput } from 'vs/workbench/common/editor/diffEditorInput';
+import { IEditorContribution } from 'vs/editor/common/editorCommon';
+import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
+import { FloatingClickWidget } from 'vs/workbench/browser/parts/editor/editorWidgets';
+import { registerEditorContribution } from 'vs/editor/browser/editorExtensions';
+import { INotificationService } from 'vs/platform/notification/common/notification';
 
 export class UserDataManualSyncViewPane extends TreeViewPane {
 
@@ -44,6 +49,7 @@ export class UserDataManualSyncViewPane extends TreeViewPane {
 	constructor(
 		options: IViewletViewOptions,
 		@IEditorService private readonly editorService: IEditorService,
+		@INotificationService private readonly notificationService: INotificationService,
 		@IProgressService private readonly progressService: IProgressService,
 		@IUserDataSyncService private readonly userDataSyncService: IUserDataSyncService,
 		@IUserDataSyncWorkbenchService userDataSyncWorkbenchService: IUserDataSyncWorkbenchService,
@@ -215,6 +221,10 @@ export class UserDataManualSyncViewPane extends TreeViewPane {
 
 	private async mergeResource(previewResource: IUserDataSyncResource): Promise<void> {
 		await this.withProgress(() => this.userDataSyncPreview.merge(previewResource.merged));
+		previewResource = this.userDataSyncPreview.resources.find(({ local }) => isEqual(local, previewResource.local))!;
+		if (previewResource.mergeState === MergeState.Conflict) {
+			this.notificationService.warn(localize('conflicts detected', "Unable to merge due to conflicts. Please resolve them to continue."));
+		}
 		await this.reopen(previewResource);
 	}
 
@@ -256,7 +266,7 @@ export class UserDataManualSyncViewPane extends TreeViewPane {
 			const leftResource = previewResource.remote;
 			const rightResource = previewResource.mergeState === MergeState.Conflict ? previewResource.merged : previewResource.local;
 			const leftResourceName = localize({ key: 'leftResourceName', comment: ['remote as in file in cloud'] }, "{0} (Remote)", basename(leftResource));
-			const rightResourceName = previewResource.mergeState === MergeState.Conflict ? localize('merge preview', "{0} (Merge Preview)", basename(rightResource))
+			const rightResourceName = previewResource.mergeState === MergeState.Conflict ? localize('merges', "{0} (Merges)", basename(rightResource))
 				: localize({ key: 'rightResourceName', comment: ['local as in file in disk'] }, "{0} (Local)", basename(rightResource));
 			await this.editorService.openEditor({
 				leftResource,
@@ -380,3 +390,102 @@ class UserDataSyncResourcesDecorationProvider extends Disposable implements IDec
 		return undefined;
 	}
 }
+
+type AcceptChangesClassification = {
+	source: { classification: 'SystemMetaData', purpose: 'FeatureInsight', isMeasurement: true };
+	action: { classification: 'SystemMetaData', purpose: 'FeatureInsight', isMeasurement: true };
+};
+
+class AcceptChangesContribution extends Disposable implements IEditorContribution {
+
+	static get(editor: ICodeEditor): AcceptChangesContribution {
+		return editor.getContribution<AcceptChangesContribution>(AcceptChangesContribution.ID);
+	}
+
+	public static readonly ID = 'editor.contrib.acceptChangesButton';
+
+	private acceptChangesButton: FloatingClickWidget | undefined;
+
+	constructor(
+		private editor: ICodeEditor,
+		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IUserDataSyncService private readonly userDataSyncService: IUserDataSyncService,
+		@IConfigurationService private readonly configurationService: IConfigurationService,
+		@ITelemetryService private readonly telemetryService: ITelemetryService,
+		@IUserDataSyncWorkbenchService private readonly userDataSyncWorkbenchService: IUserDataSyncWorkbenchService,
+	) {
+		super();
+
+		this.update();
+		this.registerListeners();
+	}
+
+	private registerListeners(): void {
+		this._register(this.editor.onDidChangeModel(() => this.update()));
+		this._register(this.userDataSyncService.onDidChangeConflicts(() => this.update()));
+		this._register(Event.filter(this.configurationService.onDidChangeConfiguration, e => e.affectsConfiguration('diffEditor.renderSideBySide'))(() => this.update()));
+	}
+
+	private update(): void {
+		if (!this.shouldShowButton(this.editor)) {
+			this.disposeAcceptChangesWidgetRenderer();
+			return;
+		}
+
+		this.createAcceptChangesWidgetRenderer();
+	}
+
+	private shouldShowButton(editor: ICodeEditor): boolean {
+		const model = editor.getModel();
+		if (!model) {
+			return false; // we need a model
+		}
+
+		const userDataSyncResource = this.getUserDataSyncResource(model.uri);
+		if (!userDataSyncResource) {
+			return false;
+		}
+
+		return true;
+	}
+
+	private createAcceptChangesWidgetRenderer(): void {
+		if (!this.acceptChangesButton) {
+			const resource = this.editor.getModel()!.uri;
+			const userDataSyncResource = this.getUserDataSyncResource(resource)!;
+
+			const isRemoteResource = isEqual(userDataSyncResource.remote, resource);
+			const isLocalResource = isEqual(userDataSyncResource.local, resource);
+			const label = isRemoteResource ? localize('accept remote', "Accept Remote")
+				: isLocalResource ? localize('accept local', "Accept Local")
+					: localize('accept merges', "Accept Merges");
+
+			this.acceptChangesButton = this.instantiationService.createInstance(FloatingClickWidget, this.editor, label, null);
+			this._register(this.acceptChangesButton.onClick(async () => {
+				const model = this.editor.getModel();
+				if (model) {
+					this.telemetryService.publicLog2<{ source: string, action: string }, AcceptChangesClassification>('sync/acceptChanges', { source: userDataSyncResource.syncResource, action: isRemoteResource ? 'acceptRemote' : isLocalResource ? 'acceptLocal' : 'acceptMerges' });
+					await this.userDataSyncWorkbenchService.userDataSyncPreview.accept(userDataSyncResource.syncResource, model.uri, model.getValue());
+				}
+			}));
+
+			this.acceptChangesButton.render();
+		}
+	}
+
+	private getUserDataSyncResource(resource: URI): IUserDataSyncResource | undefined {
+		return this.userDataSyncWorkbenchService.userDataSyncPreview.resources.find(r => isEqual(resource, r.local) || isEqual(resource, r.remote) || isEqual(resource, r.merged));
+	}
+
+	private disposeAcceptChangesWidgetRenderer(): void {
+		dispose(this.acceptChangesButton);
+		this.acceptChangesButton = undefined;
+	}
+
+	dispose(): void {
+		this.disposeAcceptChangesWidgetRenderer();
+		super.dispose();
+	}
+}
+
+registerEditorContribution(AcceptChangesContribution.ID, AcceptChangesContribution);
