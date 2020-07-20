@@ -121,9 +121,7 @@ app.on('ready', () => {
 			enableWebSQL: false,
 			enableRemoteModule: false,
 			nativeWindowOpen: true,
-			webSecurity: false,
-			webviewTag: true,
-			backgroundThrottling: false
+			webviewTag: true
 		}
 	});
 
