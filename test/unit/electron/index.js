@@ -120,6 +120,7 @@ app.on('ready', () => {
 			nodeIntegration: true,
 			enableWebSQL: false,
 			enableRemoteModule: false,
+			spellcheck: false,
 			nativeWindowOpen: true,
 			webviewTag: true
 		}
