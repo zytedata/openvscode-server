@@ -74,7 +74,7 @@
 		},
 
 		/**
-		 *  Support for subset of methods of Electron's `crashReporter` type.
+		 * Support for subset of methods of Electron's `crashReporter` type.
 		 */
 		crashReporter: {
 
