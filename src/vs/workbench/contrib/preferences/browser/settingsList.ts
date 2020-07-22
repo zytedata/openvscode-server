@@ -31,65 +31,52 @@ interface ISettingsListCacheItem {
 	template: ISettingItemTemplate;
 }
 
-class SettingsListPaginator {
+class SettingsListModel {
 	readonly PAGE_SIZE = 20;
 
 	private settings: SettingsTreeSettingElement[] = [];
 	private page = 1;
 
-	get currentPage(): number {
-		return this.page;
+	get visibleSettings(): SettingsTreeSettingElement[] {
+		return this.settings.slice(0, this.page * this.PAGE_SIZE);
 	}
 
-	get totalPages(): number {
-		return Math.ceil(this.settings.length / this.PAGE_SIZE);
-	}
-
-	get settingsOnPage(): SettingsTreeSettingElement[] {
+	get newSettings(): SettingsTreeSettingElement[] {
 		return this.settings.slice(
 			(this.page - 1) * this.PAGE_SIZE,
 			this.page * this.PAGE_SIZE,
 		);
 	}
 
-	constructor(private onPageChange: (shouldScroll: boolean) => void) { }
+	get hasMoreSettings(): boolean {
+		return this.settings.length > this.page * this.PAGE_SIZE;
+	}
 
-	setSettings(settings: SettingsTreeSettingElement[], shouldScroll: boolean): void {
+	loadMoreSettings(): void {
+		this.page++;
+	}
+
+	setSettings(settings: SettingsTreeSettingElement[], shouldResetPage: boolean): void {
+		if (shouldResetPage) {
+			this.page = 1;
+		}
+
 		this.settings = settings;
-		this.setPage(1, shouldScroll);
-	}
-
-	nextPage(): void {
-		const nextStartIdx = this.page * this.PAGE_SIZE;
-
-		if (this.settings.length > nextStartIdx) {
-			this.setPage(this.page + 1, true);
-		}
-	}
-
-	previousPage(): void {
-		if (this.page > 1) {
-			this.setPage(this.page - 1, true);
-		}
-	}
-
-	setPage(page: number, shouldScroll = true): void {
-		if (1 <= page && page <= this.totalPages) {
-			this.page = page;
-			this.onPageChange(shouldScroll);
-		}
 	}
 }
 
 export class SettingsList extends Disposable {
 	private searchFilter: (element: SettingsTreeElement) => boolean;
 	private getTemplateId = new SettingsTreeDelegate().getTemplateId;
-	private paginator = new SettingsListPaginator(this.renderPage.bind(this));
+	// private paginator = new SettingsListPaginator(this.renderPage.bind(this));
+	private paginator = new SettingsListModel();
 	private templateToRenderer = new Map<string, ITreeRenderer<SettingsTreeElement, never, ISettingItemTemplate>>();
 	private freePool = new Map<string, ISettingsListCacheItem[]>();
 	private usedPool = new Map<string, ISettingsListCacheItem[]>();
 	private pageDisposables = new DisposableStore();
 	private currentView?: ISettingsListView;
+	private pageBody: HTMLElement;
+	private loadMoreElement: HTMLElement;
 
 	dispose() {
 		for (const items of this.usedPool.values()) {
@@ -122,6 +109,9 @@ export class SettingsList extends Disposable {
 		container.setAttribute('role', 'form');
 		container.setAttribute('aria-label', localize('settings', "Settings"));
 		container.classList.add('settings-editor-tree');
+
+		this.pageBody = DOM.append(container, $('div'));
+		this.loadMoreElement = DOM.append(container, $('.settings-paginator'));
 
 		renderers.forEach(renderer => this.templateToRenderer.set(renderer.templateId, renderer));
 
@@ -205,84 +195,69 @@ export class SettingsList extends Disposable {
 	}
 
 	refresh(rootGroup: SettingsTreeGroupElement): void {
-		let shouldScroll = true;
-
 		if (isDefined(this.currentView)) {
 			const refreshedGroup = findGroup(rootGroup, this.currentView.group.id);
 
 			if (isDefined(refreshedGroup)) {
 				this.currentView = this.getSettingsFromGroup(refreshedGroup);
-				shouldScroll = false;
 			} else {
 				this.currentView = undefined;
 			}
 		}
 
 		this.currentView = this.currentView || this.getSettingsFromGroup(rootGroup);
-		this.paginator.setSettings(this.currentView.settings, shouldScroll);
+		this.paginator.setSettings(this.currentView.settings, true);
+		this.renderPage(true, false);
 	}
 
 	render(group: SettingsTreeGroupElement): void {
 		this.currentView = this.getSettingsFromGroup(group);
 		this.paginator.setSettings(this.currentView.settings, true);
+		this.renderPage(true, true);
 	}
 
-	private renderPage(shouldScroll: boolean): void {
-		DOM.clearNode(this.container);
-		this.pageDisposables.clear();
+	private renderPage(shouldRenderAllSettings: boolean, shouldScrollToTop: boolean): void {
+		if (shouldRenderAllSettings) {
+			DOM.clearNode(this.pageBody);
+			this.pageDisposables.clear();
 
-		if (this.currentView?.group.label) {
-			const headingContainer = DOM.append(this.container, $('.setting-group-heading'));
-			const groupElement = this.currentView!.group;
-			const groupRenderer = this.templateToRenderer.get(this.getTemplateId(groupElement))!;
-			groupRenderer.renderElement({ element: groupElement } as any, 0, groupRenderer.renderTemplate(headingContainer), undefined);
+			if (this.currentView?.group.label) {
+				const headingContainer = DOM.append(this.pageBody, $('.setting-group-heading'));
+				const groupElement = this.currentView!.group;
+				const groupRenderer = this.templateToRenderer.get(this.getTemplateId(groupElement))!;
+				groupRenderer.renderElement({ element: groupElement } as any, 0, groupRenderer.renderTemplate(headingContainer), undefined);
+			}
 		}
 
-		this.container.append(...this.paginator.settingsOnPage.map(setting => this.renderSetting(setting)));
+		const settingsToRender = shouldRenderAllSettings ? this.paginator.visibleSettings : this.paginator.newSettings;
+		const renderedSettings = settingsToRender.map(setting => this.renderSetting(setting));
+		this.pageBody.append(...renderedSettings);
 
-		if (this.paginator.totalPages > 1) {
-			this.renderPaginatorControls();
+		if (this.paginator.hasMoreSettings) {
+			this.showPaginationControls();
+		} else {
+			DOM.clearNode(this.loadMoreElement);
 		}
 
-		if (shouldScroll) {
+		if (shouldScrollToTop) {
 			this.container.scrollTop = 0;
 		}
+
+		if (!shouldRenderAllSettings) {
+			renderedSettings[0].scrollIntoView();
+		}
 	}
 
-	private renderPaginatorControls(): void {
-		const paginatorContainer = DOM.append(this.container, $('.settings-paginator', {
-			'role': 'navigation',
-			'aria-label': localize('settingsPage', "Settings Page")
+	private showPaginationControls(): void {
+		DOM.clearNode(this.loadMoreElement);
+		const loadMoreButton = this.pageDisposables.add(new Button(this.loadMoreElement, {
+			title: localize('loadMoreSettings', "Load more settings"),
 		}));
-
-		const previousButtonContainer = DOM.append(paginatorContainer, $('.settings-paginator-control-button'));
-		const previousButton = this.pageDisposables.add(new Button(previousButtonContainer, {
-			title: localize('previousPageTitle', "Previous page")
+		loadMoreButton.label = localize('loadMoreSettings', "Load more settings");
+		this.pageDisposables.add(loadMoreButton.onDidClick(() => {
+			this.paginator.loadMoreSettings();
+			this.renderPage(false, false);
 		}));
-
-		previousButton.label = localize('previousPageLabel', "Previous");
-		this.pageDisposables.add(previousButton.onDidClick(() => this.paginator.previousPage()));
-
-		for (let pageNumber = 1; pageNumber <= this.paginator.totalPages; pageNumber++) {
-			const goToPageButtonContainer = DOM.append(paginatorContainer, $('.settings-paginator-go-to-page-button'));
-			const goToPageButton = this.pageDisposables.add(new Button(goToPageButtonContainer, {
-				title: pageNumber === this.paginator.currentPage
-					? localize('currentPage', "Current page, {0}", pageNumber)
-					: localize('goToPage', "Go to page {0}", pageNumber),
-			}));
-
-			goToPageButton.label = pageNumber.toString();
-
-			this.pageDisposables.add(goToPageButton.onDidClick(() => this.paginator.setPage(pageNumber)));
-		}
-
-		const nextButtonContainer = DOM.append(paginatorContainer, $('.settings-paginator-control-button'));
-		const nextButton = this.pageDisposables.add(new Button(nextButtonContainer, {
-			title: localize('nextPageTitle', "Next page")
-		}));
-
-		nextButton.label = localize('nextPageLabel', "Next");
-		this.pageDisposables.add(nextButton.onDidClick(() => this.paginator.nextPage()));
 	}
 
 	private getSettingsFromGroup(group: SettingsTreeGroupElement): ISettingsListView {
