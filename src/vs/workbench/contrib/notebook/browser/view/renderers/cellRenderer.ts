@@ -36,9 +36,9 @@ import { IInstantiationService } from 'vs/platform/instantiation/common/instanti
 import { ServiceCollection } from 'vs/platform/instantiation/common/serviceCollection';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { INotificationService } from 'vs/platform/notification/common/notification';
-import { BOTTOM_CELL_TOOLBAR_HEIGHT, CELL_BOTTOM_MARGIN, EDITOR_BOTTOM_PADDING, EDITOR_TOOLBAR_HEIGHT, EDITOR_TOP_MARGIN, EDITOR_TOP_PADDING } from 'vs/workbench/contrib/notebook/browser/constants';
+import { BOTTOM_CELL_TOOLBAR_HEIGHT, CELL_BOTTOM_MARGIN, CELL_TOP_MARGIN, EDITOR_BOTTOM_PADDING, EDITOR_TOOLBAR_HEIGHT, EDITOR_TOP_PADDING } from 'vs/workbench/contrib/notebook/browser/constants';
 import { CancelCellAction, ChangeCellLanguageAction, ExecuteCellAction, INotebookCellActionContext } from 'vs/workbench/contrib/notebook/browser/contrib/coreActions';
-import { BaseCellRenderTemplate, CellEditState, CodeCellRenderTemplate, ICellViewModel, INotebookCellList, INotebookEditor, isCodeCellRenderTemplate, MarkdownCellRenderTemplate } from 'vs/workbench/contrib/notebook/browser/notebookBrowser';
+import { BaseCellRenderTemplate, CellCollapseState, CellEditState, CodeCellRenderTemplate, ICellViewModel, INotebookCellList, INotebookEditor, isCodeCellRenderTemplate, MarkdownCellRenderTemplate } from 'vs/workbench/contrib/notebook/browser/notebookBrowser';
 import { CellContextKeyManager } from 'vs/workbench/contrib/notebook/browser/view/renderers/cellContextKeys';
 import { CellMenus } from 'vs/workbench/contrib/notebook/browser/view/renderers/cellMenus';
 import { CodeCell } from 'vs/workbench/contrib/notebook/browser/view/renderers/codeCell';
@@ -47,7 +47,7 @@ import { CodeCellViewModel } from 'vs/workbench/contrib/notebook/browser/viewMod
 import { MarkdownCellViewModel } from 'vs/workbench/contrib/notebook/browser/viewModel/markdownCellViewModel';
 import { CellViewModel } from 'vs/workbench/contrib/notebook/browser/viewModel/notebookViewModel';
 import { CellKind, NotebookCellMetadata, NotebookCellRunState } from 'vs/workbench/contrib/notebook/common/notebookCommon';
-import { VerticalSeparator, createAndFillInActionBarActionsWithVerticalSeparators, VerticalSeparatorViewItem } from './cellActionView';
+import { createAndFillInActionBarActionsWithVerticalSeparators, VerticalSeparator, VerticalSeparatorViewItem } from './cellActionView';
 
 const $ = DOM.$;
 
@@ -271,14 +271,14 @@ abstract class AbstractCellRenderer {
 			if (actions.primary.length || actions.secondary.length) {
 				templateData.container.classList.add('cell-has-toolbar-actions');
 				if (isCodeCellRenderTemplate(templateData)) {
-					templateData.focusIndicator.style.top = `${EDITOR_TOOLBAR_HEIGHT + EDITOR_TOP_MARGIN}px`;
-					templateData.focusIndicatorRight.style.top = `${EDITOR_TOOLBAR_HEIGHT + EDITOR_TOP_MARGIN}px`;
+					templateData.focusIndicator.style.top = `${EDITOR_TOOLBAR_HEIGHT + CELL_TOP_MARGIN}px`;
+					templateData.focusIndicatorRight.style.top = `${EDITOR_TOOLBAR_HEIGHT + CELL_TOP_MARGIN}px`;
 				}
 			} else {
 				templateData.container.classList.remove('cell-has-toolbar-actions');
 				if (isCodeCellRenderTemplate(templateData)) {
-					templateData.focusIndicator.style.top = `${EDITOR_TOP_MARGIN}px`;
-					templateData.focusIndicatorRight.style.top = `${EDITOR_TOP_MARGIN}px`;
+					templateData.focusIndicator.style.top = `${CELL_TOP_MARGIN}px`;
+					templateData.focusIndicatorRight.style.top = `${CELL_TOP_MARGIN}px`;
 				}
 			}
 		};
@@ -299,6 +299,8 @@ abstract class AbstractCellRenderer {
 				this.notebookEditor.selectElement(templateData.currentRenderedCell);
 			}
 		}, true));
+
+		this.setupCollapsedPart(templateData);
 	}
 
 	protected commonRenderElement(element: ICellViewModel, index: number, templateData: BaseCellRenderTemplate): void {
@@ -307,6 +309,18 @@ abstract class AbstractCellRenderer {
 		} else {
 			templateData.container.classList.remove(DRAGGING_CLASS);
 		}
+	}
+
+	protected setupCollapsedPart(templateData: BaseCellRenderTemplate): void {
+		templateData.collapsedPart.innerHTML = renderCodicons('$(unfold)');
+		DOM.hide(templateData.collapsedPart);
+		templateData.disposables.add(domEvent(templateData.collapsedPart, DOM.EventType.CLICK)(() => {
+			if (!templateData.currentRenderedCell) {
+				return;
+			}
+
+			templateData.currentRenderedCell.collapseState = CellCollapseState.Normal;
+		}));
 	}
 }
 
@@ -347,6 +361,8 @@ export class MarkdownCellRenderer extends AbstractCellRenderer implements IListR
 		const innerContent = DOM.append(container, $('.cell.markdown'));
 		const foldingIndicator = DOM.append(container, DOM.$('.notebook-folding-indicator'));
 
+		const collapsedPart = DOM.append(container, $('.cell.cell-collapsed-part'));
+
 		const bottomCellContainer = DOM.append(container, $('.cell-bottom-toolbar-container'));
 		const betweenCellToolbar = disposables.add(this.createBetweenCellToolbar(bottomCellContainer, disposables, contextKeyService));
 
@@ -354,6 +370,7 @@ export class MarkdownCellRenderer extends AbstractCellRenderer implements IListR
 		const titleMenu = disposables.add(this.cellMenus.getCellTitleMenu(contextKeyService));
 
 		const templateData: MarkdownCellRenderTemplate = {
+			collapsedPart,
 			contextKeyService,
 			container,
 			cellContainer: innerContent,
@@ -926,6 +943,8 @@ export class CodeCellRenderer extends AbstractCellRenderer implements IListRende
 
 		disposables.add(this.editorOptions.onDidChange(newValue => editor.updateOptions(newValue)));
 
+		const collapsedPart = DOM.append(container, $('.cell.cell-collapsed-part'));
+
 		const progressBar = new ProgressBar(editorPart);
 		progressBar.hide();
 		disposables.add(progressBar);
@@ -947,6 +966,8 @@ export class CodeCellRenderer extends AbstractCellRenderer implements IListRende
 		const titleMenu = disposables.add(this.cellMenus.getCellTitleMenu(contextKeyService));
 
 		const templateData: CodeCellRenderTemplate = {
+			editorPart,
+			collapsedPart,
 			contextKeyService,
 			container,
 			cellContainer,
