@@ -74,7 +74,7 @@ export class WebWorkerExtensionHost extends Disposable implements IExtensionHost
 
 	public async start(): Promise<IMessagePassingProtocol> {
 		if (!this._protocolPromise) {
-			if (WRAP_IN_IFRAME) {
+			if (WRAP_IN_IFRAME && platform.isWeb) {
 				this._protocolPromise = this._startInsideIframe();
 			} else {
 				this._protocolPromise = this._startOutsideIframe();
@@ -94,7 +94,7 @@ export class WebWorkerExtensionHost extends Disposable implements IExtensionHost
 
 		const vscodeWebWorkerExtHostId = generateUuid();
 		const workerUrl = require.toUrl('../worker/extensionHostWorkerMain.js');
-		const sourcesOrigin = /^(http:)|(https:)|(file:)/.test(workerUrl) ? new URL(workerUrl).origin : location.origin;
+		const sourcesOrigin = /^((http:)|(https:)|(file:))/.test(workerUrl) ? new URL(workerUrl).origin : location.origin;
 		const workerSrc = getWorkerBootstrapUrl(workerUrl, 'WorkerExtensionHost', true);
 		const escapeAttribute = (value: string): string => {
 			return value.replace(/"/g, '&quot;');
