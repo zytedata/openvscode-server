@@ -43,7 +43,7 @@ import { BaseEditor } from 'vs/workbench/browser/parts/editor/baseEditor';
 import { IEditorMemento, IEditorPane } from 'vs/workbench/common/editor';
 import { attachSuggestEnabledInputBoxStyler, SuggestEnabledInput } from 'vs/workbench/contrib/codeEditor/browser/suggestEnabledInput/suggestEnabledInput';
 import { SettingsTarget, SettingsTargetsWidget } from 'vs/workbench/contrib/preferences/browser/preferencesWidgets';
-import { commonlyUsedData, tocData } from 'vs/workbench/contrib/preferences/browser/settingsLayout';
+import { commonlyUsedData, ITOCEntry, tocData } from 'vs/workbench/contrib/preferences/browser/settingsLayout';
 import { AbstractSettingRenderer, ISettingLinkClickEvent, ISettingOverrideClickEvent, resolveExtensionsSettings, resolveSettingsTree, SettingsTree, SettingTreeRenderers, updateSettingTreeTabOrder } from 'vs/workbench/contrib/preferences/browser/settingsTree';
 import { ISettingsEditorViewState, parseQuery, SearchResultIdx, SearchResultModel, SettingsTreeElement, SettingsTreeGroupChild, SettingsTreeGroupElement, SettingsTreeModel, SettingsTreeSettingElement } from 'vs/workbench/contrib/preferences/browser/settingsTreeModels';
 import { settingsTextInputBorder } from 'vs/workbench/contrib/preferences/browser/settingsWidgets';
@@ -508,7 +508,16 @@ export class SettingsEditor2 extends BaseEditor {
 				// e.g. clicked a searched element, now the search has been cleared
 			}
 
-			this.settingsTree.reveal(elements[0], sourceTop);
+			// TODO@9at8 find out the group that elements[0] belongs to
+			//  if this group is different than the current group, then update
+			//  the root of settingsTreeModel to match that group.
+
+			const settingElement = elements[0];
+			if (settingElement.parent) {
+				this.settingsTreeModel.update(settingElement.parent as ITOCEntry);
+				this.refreshTree();
+				// this.settingsTree.reveal(settingElement);
+			}
 
 			const domElements = this.settingRenderers.getDOMElementsForSettingKey(this.settingsTree.getHTMLElement(), evt.targetKey);
 			if (domElements && domElements[0]) {
@@ -614,6 +623,7 @@ export class SettingsEditor2 extends BaseEditor {
 					this.settingsTree.scrollTop = 0;
 				}
 			} else if (element && (!e.browserEvent || !(<IFocusEventFromScroll>e.browserEvent).fromScroll)) {
+				// TODO@9at8 set the element as the root of the settings tree model
 				this.settingsTree.reveal(element, 0);
 			}
 		}));
@@ -952,6 +962,8 @@ export class SettingsEditor2 extends BaseEditor {
 		}
 
 		if (this.settingsTreeModel) {
+			// TODO@9at8 Find out what the id of the previous group is, find the same group in the updated settings
+			//  and then update. If the old group doesn't exist, use the first group - Commonly Used
 			this.settingsTreeModel.update(resolvedSettingsRoot);
 
 			if (schemaChange && !!this.searchResultModel) {
@@ -963,7 +975,10 @@ export class SettingsEditor2 extends BaseEditor {
 			this.renderTree(undefined, forceRefresh);
 		} else {
 			this.settingsTreeModel = this.instantiationService.createInstance(SettingsTreeModel, this.viewState);
+			// TODO@9at8 Update the root with the first group in the settings - Commonly Used
 			this.settingsTreeModel.update(resolvedSettingsRoot);
+
+			// TODO@9at8 Dont set the toc root as the settings root, instead, set it to the overall root
 			this.tocTreeModel.settingsTreeRoot = this.settingsTreeModel.root as SettingsTreeGroupElement;
 
 			const cachedState = this.restoreCachedState();

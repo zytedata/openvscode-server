@@ -304,11 +304,7 @@ export class SettingsTreeModel {
 			(<SettingsTreeGroupElement>newRoot.children[0]).isFirstGroup = true; // TODO
 		}
 
-		if (this._root) {
-			this._root.children = newRoot.children;
-		} else {
-			this._root = newRoot;
-		}
+		this._root = newRoot;
 	}
 
 	getElementById(id: string): SettingsTreeElement | null {
