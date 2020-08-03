@@ -952,7 +952,7 @@ The log file may contain personal data, including full paths and source code fro
 
 		sections.push(`**TS Server Log**
 
-Server logging disabled. To help us fix crashes like this, please enable logging by setting:
+❗️Server logging disabled. To help us fix crashes like this, please enable logging by setting:
 
 \`\`\`json
 "typescript.tsserver.log": "verbose"
@@ -962,6 +962,8 @@ After enabling this setting, future crash reports will include the server log.`)
 	}
 
 	sections.push(`**TS Server Error Stack**
+
+Server: \`${error.serverId}\`
 
 \`\`\`
 ${error.serverStack}
