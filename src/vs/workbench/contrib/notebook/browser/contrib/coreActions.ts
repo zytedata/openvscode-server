@@ -1497,3 +1497,37 @@ registerAction2(class extends NotebookCellAction {
 		context.notebookEditor.viewModel!.notebookDocument.changeCellMetadata(context.cell.handle, { inputCollapsed: false });
 	}
 });
+
+registerAction2(class extends Action2 {
+	constructor() {
+		super({
+			id: 'notebook.inspectLayout',
+			title: localize('notebookActions.inspectLayout', "Inspect Notebook Layout"),
+			category: { value: localize({ key: 'developer', comment: ['A developer on Code itself or someone diagnosing issues in Code'] }, "Developer"), original: 'Developer' },
+			f1: true
+		});
+	}
+
+	protected getActiveEditorContext(accessor: ServicesAccessor): INotebookActionContext | undefined {
+		const editorService = accessor.get(IEditorService);
+
+		const editor = getActiveNotebookEditor(editorService);
+		if (!editor) {
+			return;
+		}
+
+		const activeCell = editor.getActiveCell();
+		return {
+			cell: activeCell,
+			notebookEditor: editor
+		};
+	}
+
+	run(accessor: ServicesAccessor) {
+		const activeEditorContext = this.getActiveEditorContext(accessor);
+
+		if (activeEditorContext) {
+			activeEditorContext.notebookEditor.viewModel!.inspectLayout();
+		}
+	}
+});
