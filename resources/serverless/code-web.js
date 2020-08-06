@@ -28,7 +28,8 @@ const args = minimist(process.argv, {
 	boolean: [
 		'no-launch',
 		'help',
-		'verbose'
+		'verbose',
+		'wrap-iframe'
 	],
 	string: [
 		'scheme',
@@ -43,6 +44,7 @@ if (args.help) {
 	console.log(
 		'yarn web [options]\n' +
 		' --no-launch      Do not open VSCode web in the browser\n' +
+		' --wrap-iframe    Wrap the Web Worker Extension Host in an iframe\n' +
 		' --scheme         Protocol (https or http)\n' +
 		' --host           Remote host\n' +
 		' --port           Remote/Local port\n' +
@@ -82,6 +84,17 @@ async function getBuiltInExtensionInfos() {
 		allExtensions.push(ext);
 		locations[ext.extensionPath] = path.join(BUILTIN_MARKETPLACE_EXTENSIONS_ROOT, ext.extensionPath);
 	}
+	for (const ext of allExtensions) {
+		if (ext.packageJSON.browser) {
+			let mainFilePath = path.join(locations[ext.extensionPath], ext.packageJSON.browser);
+			if (path.extname(mainFilePath) !== '.js') {
+				mainFilePath += '.js';
+			}
+			if (!await exists(mainFilePath)) {
+				fancyLog(`${ansiColors.red('Error')}: Could not find ${mainFilePath}. Use ${ansiColors.cyan('yarn watch-web')} to build the built-in extensions.`);
+			}
+		}
+	}
 	return { extensions: allExtensions, locations };
 }
 
@@ -120,16 +133,6 @@ async function getExtensionPackageJSON(extensionPath) {
 			let packageJSON = JSON.parse((await readFile(packageJSONPath)).toString());
 			if (packageJSON.main && !packageJSON.browser) {
 				return; // unsupported
-			}
-
-			if (packageJSON.browser) {
-				let mainFilePath = path.join(extensionPath, packageJSON.browser);
-				if (path.extname(mainFilePath) !== '.js') {
-					mainFilePath += '.js';
-				}
-				if (!await exists(mainFilePath)) {
-					fancyLog(`${ansiColors.yellow('Warning')}: Could not find ${mainFilePath}. Use ${ansiColors.cyan('yarn gulp watch-web')} to build the built-in extensions.`);
-				}
 			}
 
 			const packageNLSPath = path.join(extensionPath, 'package.nls.json');
@@ -293,13 +296,16 @@ async function handleRoot(req, res) {
 		fancyLog(`${ansiColors.magenta('Additional extensions')}: ${staticExtensions.map(e => path.basename(e.extensionLocation.path)).join(', ') || 'None'}`);
 	}
 
-	const webConfigJSON = escapeAttribute(JSON.stringify({
+	const webConfigJSON = {
 		folderUri: folderUri,
-		staticExtensions
-	}));
+		staticExtensions,
+	};
+	if (args['wrap-iframe']) {
+		webConfigJSON._wrapWebWorkerExtHostInIframe = true;
+	}
 
 	const data = (await readFile(WEB_MAIN)).toString()
-		.replace('{{WORKBENCH_WEB_CONFIGURATION}}', () => webConfigJSON) // use a replace function to avoid that regexp replace patterns ($&, $0, ...) are applied
+		.replace('{{WORKBENCH_WEB_CONFIGURATION}}', () => escapeAttribute(JSON.stringify(webConfigJSON))) // use a replace function to avoid that regexp replace patterns ($&, $0, ...) are applied
 		.replace('{{WORKBENCH_BUILTIN_EXTENSIONS}}', () => escapeAttribute(JSON.stringify(builtInExtensions)))
 		.replace('{{WEBVIEW_ENDPOINT}}', '')
 		.replace('{{REMOTE_USER_DATA_URI}}', '');
