@@ -22,6 +22,7 @@ import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace
 import { IViewDescriptorService } from 'vs/workbench/common/views';
 import { ViewPaneContainer } from 'vs/workbench/browser/parts/views/viewPaneContainer';
 import { addClass } from 'vs/base/browser/dom';
+import { SCMViewPane } from 'vs/workbench/contrib/scm/browser/scmViewPane';
 
 export class SCMViewPaneContainer extends ViewPaneContainer {
 
@@ -52,6 +53,18 @@ export class SCMViewPaneContainer extends ViewPaneContainer {
 	create(parent: HTMLElement): void {
 		super.create(parent);
 		addClass(parent, 'scm-viewlet');
+	}
+
+	getActionsContext(): unknown {
+		if (this.views.length === 1) {
+			const view = this.views[0];
+
+			if (view instanceof SCMViewPane) {
+				return view.getActionsContext();
+			}
+		}
+
+		return undefined;
 	}
 
 	getOptimalWidth(): number {
