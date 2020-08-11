@@ -762,15 +762,6 @@ declare module 'vscode' {
 		debugAdapterExecutable?(folder: WorkspaceFolder | undefined, token?: CancellationToken): ProviderResult<DebugAdapterExecutable>;
 	}
 
-	export namespace debug {
-
-		/**
-		 * Stop the given debug session or stop all debug sessions if session is omitted.
-		 * @param session The [debug session](#DebugSession) to stop; if omitted all sessions are stopped.
-		 */
-		export function stopDebugging(session?: DebugSession): Thenable<void>;
-	}
-
 	//#endregion
 
 	//#region LogLevel: https://github.com/microsoft/vscode/issues/85992
@@ -923,93 +914,6 @@ declare module 'vscode' {
 		 * created.
 		 */
 		readonly dimensions: TerminalDimensions | undefined;
-	}
-
-	//#endregion
-
-	//#region Terminal link handlers https://github.com/microsoft/vscode/issues/91606
-
-	export namespace window {
-		/**
-		 * Register a [TerminalLinkHandler](#TerminalLinkHandler) that can be used to intercept and
-		 * handle links that are activated within terminals.
-		 * @param handler The link handler being registered.
-		 * @return A disposable that unregisters the link handler.
-		 */
-		export function registerTerminalLinkHandler(handler: TerminalLinkHandler): Disposable;
-	}
-
-	/**
-	 * Describes how to handle terminal links.
-	 */
-	export interface TerminalLinkHandler {
-		/**
-		 * Handles a link that is activated within the terminal.
-		 *
-		 * @param terminal The terminal the link was activated on.
-		 * @param link The text of the link activated.
-		 * @return Whether the link was handled, if the link was handled this link will not be
-		 * considered by any other extension or by the default built-in link handler.
-		 */
-		handleLink(terminal: Terminal, link: string): ProviderResult<boolean>;
-	}
-
-	//#endregion
-
-	//#region Terminal link provider https://github.com/microsoft/vscode/issues/91606
-
-	export namespace window {
-		export function registerTerminalLinkProvider(provider: TerminalLinkProvider): Disposable;
-	}
-
-	export interface TerminalLinkContext {
-		/**
-		 * This is the text from the unwrapped line in the terminal.
-		 */
-		line: string;
-
-		/**
-		 * The terminal the link belongs to.
-		 */
-		terminal: Terminal;
-	}
-
-	export interface TerminalLinkProvider<T extends TerminalLink = TerminalLink> {
-		/**
-		 * Provide terminal links for the given context. Note that this can be called multiple times
-		 * even before previous calls resolve, make sure to not share global objects (eg. `RegExp`)
-		 * that could have problems when asynchronous usage may overlap.
-		 * @param context Information about what links are being provided for.
-		 * @param token A cancellation token.
-		 * @return A list of terminal links for the given line.
-		 */
-		provideTerminalLinks(context: TerminalLinkContext, token: CancellationToken): ProviderResult<T[]>
-
-		/**
-		 * Handle an activated terminal link.
-		 */
-		handleTerminalLink(link: T): ProviderResult<void>;
-	}
-
-	export interface TerminalLink {
-		/**
-		 * The start index of the link on [TerminalLinkContext.line](#TerminalLinkContext.line].
-		 */
-		startIndex: number;
-
-		/**
-		 * The length of the link on [TerminalLinkContext.line](#TerminalLinkContext.line]
-		 */
-		length: number;
-
-		/**
-		 * The tooltip text when you hover over this link.
-		 *
-		 * If a tooltip is provided, is will be displayed in a string that includes instructions on
-		 * how to trigger the link, such as `{0} (ctrl + click)`. The specific instructions vary
-		 * depending on OS, user settings, and localization.
-		 */
-		tooltip?: string;
 	}
 
 	//#endregion
