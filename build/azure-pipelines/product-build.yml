@@ -119,6 +119,13 @@ stages:
     steps:
     - template: darwin/product-build-darwin.yml
 
+  - job: macOSARM64
+    condition: and(succeeded(), eq(variables['VSCODE_BUILD_MACOS_ARM64'], 'true'))
+    variables:
+      VSCODE_ARCH: arm64
+    steps:
+    - template: darwin/product-build-darwin-arm64.yml
+
 - stage: Mooncake
   dependsOn:
   - Windows
