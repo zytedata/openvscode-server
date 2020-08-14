@@ -258,9 +258,7 @@ steps:
     AZURE_STORAGE_ACCESS_KEY="$(ticino-storage-key)" \
     AZURE_STORAGE_ACCESS_KEY_2="$(vscode-storage-key)" \
     # publish the build
-    node build/azure-pipelines/common/createAsset.js \
-	  darwin \
-	  archive \
+    node build/azure-pipelines/common/createAsset.js darwin archive \
 	  "VSCode-darwin-$(VSCODE_QUALITY)-$(VSCODE_ARCH).zip" \
 	  $(agent.builddirectory)/VSCode-darwin-$(VSCODE_ARCH).zip
   displayName: Publish
