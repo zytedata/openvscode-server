@@ -27,7 +27,7 @@ const REPO_ROOT = path.dirname(__dirname);
 const BUILD_TARGETS = [
 	{ platform: 'win32', arch: 'ia32', pkgTarget: 'node8-win-x86' },
 	{ platform: 'win32', arch: 'x64', pkgTarget: 'node8-win-x64' },
-	{ platform: 'darwin', arch: null, pkgTarget: 'node8-macos-x64' },
+	{ platform: 'darwin', arch: 'x64', pkgTarget: 'node8-macos-x64' },
 	{ platform: 'linux', arch: 'ia32', pkgTarget: 'node8-linux-x86' },
 	{ platform: 'linux', arch: 'x64', pkgTarget: 'node8-linux-x64' },
 	{ platform: 'linux', arch: 'armhf', pkgTarget: 'node8-linux-armv7' },
@@ -39,7 +39,7 @@ const noop = () => { return Promise.resolve(); };
 
 gulp.task('vscode-reh-win32-ia32-min', noop);
 gulp.task('vscode-reh-win32-x64-min', noop);
-gulp.task('vscode-reh-darwin-min', noop);
+gulp.task('vscode-reh-darwin-x64-min', noop);
 gulp.task('vscode-reh-linux-x64-min', noop);
 gulp.task('vscode-reh-linux-armhf-min', noop);
 gulp.task('vscode-reh-linux-arm64-min', noop);
@@ -47,7 +47,7 @@ gulp.task('vscode-reh-linux-alpine-min', noop);
 
 gulp.task('vscode-reh-web-win32-ia32-min', noop);
 gulp.task('vscode-reh-web-win32-x64-min', noop);
-gulp.task('vscode-reh-web-darwin-min', noop);
+gulp.task('vscode-reh-web-darwin-x64-min', noop);
 gulp.task('vscode-reh-web-linux-x64-min', noop);
 gulp.task('vscode-reh-web-linux-alpine-min', noop);
 

@@ -88,10 +88,6 @@ steps:
     set -e
     VSCODE_MIXIN_PASSWORD="$(github-distro-mixin-password)" \
       yarn gulp vscode-darwin-$(VSCODE_ARCH)-min-ci
-    VSCODE_MIXIN_PASSWORD="$(github-distro-mixin-password)" \
-      yarn gulp vscode-reh-darwin-$(VSCODE_ARCH)-min-ci
-    VSCODE_MIXIN_PASSWORD="$(github-distro-mixin-password)" \
-      yarn gulp vscode-reh-web-darwin-$(VSCODE_ARCH)-min-ci
   displayName: Build
 
 #- script: |
@@ -257,10 +253,7 @@ steps:
     AZURE_DOCUMENTDB_MASTERKEY="$(builds-docdb-key-readwrite)" \
     AZURE_STORAGE_ACCESS_KEY="$(ticino-storage-key)" \
     AZURE_STORAGE_ACCESS_KEY_2="$(vscode-storage-key)" \
-    # publish the build
-    node build/azure-pipelines/common/createAsset.js darwin archive \
-    "VSCode-darwin-$(VSCODE_QUALITY)-$(VSCODE_ARCH).zip" \
-    $(agent.builddirectory)/VSCode-darwin-$(VSCODE_ARCH).zip
+    ./build/azure-pipelines/darwin/publish.sh
   displayName: Publish
 
 - script: |

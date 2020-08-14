@@ -24,7 +24,7 @@ async function main(): Promise<void> {
 	}
 
 	const baseDir = path.dirname(__dirname);
-	const appRoot = path.join(buildDir, arch ? `VSCode-darwin-${arch}` : 'VSCode-darwin');
+	const appRoot = path.join(buildDir,`VSCode-darwin-${arch}`);
 	const appName = product.nameLong + '.app';
 	const appFrameworkPath = path.join(appRoot, appName, 'Contents', 'Frameworks');
 	const helperAppBaseName = product.nameShort;
