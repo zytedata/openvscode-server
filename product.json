@@ -22,6 +22,7 @@
 	"licenseFileName": "LICENSE.txt",
 	"reportIssueUrl": "https://github.com/Microsoft/vscode/issues/new",
 	"urlProtocol": "code-oss",
+	"electronRepository": "electron/nightlies",
 	"extensionAllowedProposedApi": [
 		"ms-vscode.vscode-js-profile-flame",
 		"ms-vscode.vscode-js-profile-table",
