@@ -9,12 +9,12 @@ node build/azure-pipelines/common/createAsset.js \
 	../VSCode-darwin-$VSCODE_ARCH.zip
 
 # package Remote Extension Host
-pushd .. && mv vscode-reh-darwin-$VSCODE_ARCH vscode-server-darwin-$VSCODE_ARCH \
-	&& zip -Xry vscode-server-darwin-$VSCODE_ARCH.zip vscode-server-darwin-$VSCODE_ARCH && popd
+pushd .. && mv vscode-reh-darwin vscode-server-darwin \
+	&& zip -Xry vscode-server-darwin vscode-server-darwin && popd
 
 # publish Remote Extension Host
 node build/azure-pipelines/common/createAsset.js \
 	server-darwin \
 	archive-unsigned \
-	"vscode-server-darwin-$VSCODE_ARCH.zip" \
-	../vscode-server-darwin-$VSCODE_ARCH.zip
+	"vscode-server-darwin.zip" \
+	../vscode-server-darwin.zip
