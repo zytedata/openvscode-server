@@ -81,7 +81,7 @@ export const config = {
 	linuxExecutableName: product.applicationName,
 	winIcon: 'resources/win32/code.ico',
 	token: process.env['VSCODE_MIXIN_PASSWORD'] || process.env['GITHUB_TOKEN'] || undefined,
-	repo: product.electronRepository || undefined
+	repo: product.electronRepository || 'electron/nightlies'
 };
 
 function getElectron(arch: string): () => NodeJS.ReadWriteStream {
