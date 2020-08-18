@@ -112,6 +112,11 @@ export interface IEditorPane extends IComposite {
 	 * Finds out if this editor is visible or not.
 	 */
 	isVisible(): boolean;
+
+	/**
+	 * Should be overridden by editors that have their own ScopedContextKeyService
+	 */
+	invokeWithinContext<T>(fn: (accessor: ServicesAccessor) => T): T | null;
 }
 
 /**
