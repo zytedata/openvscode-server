@@ -79,4 +79,5 @@ steps:
     searchFolder: '$(Build.ArtifactStagingDirectory)/test-results'
     testRunTitle: 'Windows'
     mergeTestResults: true
+    platform: 'x64'
   condition: succeededOrFailed()
