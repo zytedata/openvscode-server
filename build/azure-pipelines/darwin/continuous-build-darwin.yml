@@ -70,6 +70,4 @@ steps:
   inputs:
     testResultsFiles: '*-results.xml'
     searchFolder: '$(Build.ArtifactStagingDirectory)/test-results'
-    testRunTitle: 'macOS'
-    mergeTestResults: true
   condition: succeededOrFailed()
