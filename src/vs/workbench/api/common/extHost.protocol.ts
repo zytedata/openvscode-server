@@ -581,7 +581,7 @@ export interface ExtHostEditorInsetsShape {
 	$onDidReceiveMessage(handle: number, message: any): void;
 }
 
-export type WebviewPanelHandle = string;
+export type WebviewHandle = string;
 
 export interface WebviewPanelShowOptions {
 	readonly viewColumn?: EditorViewColumn;
@@ -609,31 +609,36 @@ export interface CustomTextEditorCapabilities {
 }
 
 export interface MainThreadWebviewsShape extends IDisposable {
-	$createWebviewPanel(extension: WebviewExtensionDescription, handle: WebviewPanelHandle, viewType: string, title: string, showOptions: WebviewPanelShowOptions, options: modes.IWebviewPanelOptions & modes.IWebviewOptions): void;
-	$disposeWebview(handle: WebviewPanelHandle): void;
-	$reveal(handle: WebviewPanelHandle, showOptions: WebviewPanelShowOptions): void;
-	$setTitle(handle: WebviewPanelHandle, value: string): void;
-	$setIconPath(handle: WebviewPanelHandle, value: { light: UriComponents, dark: UriComponents; } | undefined): void;
+	$setHtml(handle: WebviewHandle, value: string): void;
+	$setOptions(handle: WebviewHandle, options: modes.IWebviewOptions): void;
+	$postMessage(handle: WebviewHandle, value: any): Promise<boolean>
+}
 
-	$setHtml(handle: WebviewPanelHandle, value: string): void;
-	$setOptions(handle: WebviewPanelHandle, options: modes.IWebviewOptions): void;
-
-	$postMessage(handle: WebviewPanelHandle, value: any): Promise<boolean>;
+export interface MainThreadWebviewPanelsShape extends IDisposable {
+	$createWebviewPanel(extension: WebviewExtensionDescription, handle: WebviewHandle, viewType: string, title: string, showOptions: WebviewPanelShowOptions, options: modes.IWebviewPanelOptions & modes.IWebviewOptions): void;
+	$disposeWebview(handle: WebviewHandle): void;
+	$reveal(handle: WebviewHandle, showOptions: WebviewPanelShowOptions): void;
+	$setTitle(handle: WebviewHandle, value: string): void;
+	$setIconPath(handle: WebviewHandle, value: { light: UriComponents, dark: UriComponents; } | undefined): void;
 
 	$registerSerializer(viewType: string): void;
 	$unregisterSerializer(viewType: string): void;
+}
 
+export interface MainThreadCustomEditorsShape extends IDisposable {
 	$registerTextEditorProvider(extension: WebviewExtensionDescription, viewType: string, options: modes.IWebviewPanelOptions, capabilities: CustomTextEditorCapabilities): void;
 	$registerCustomEditorProvider(extension: WebviewExtensionDescription, viewType: string, options: modes.IWebviewPanelOptions, supportsMultipleEditorsPerDocument: boolean): void;
 	$unregisterEditorProvider(viewType: string): void;
 
 	$onDidEdit(resource: UriComponents, viewType: string, editId: number, label: string | undefined): void;
 	$onContentChange(resource: UriComponents, viewType: string): void;
+}
 
+export interface MainThreadWebviewViewsShape extends IDisposable {
 	$registerWebviewViewProvider(viewType: string, options?: { retainContextWhenHidden?: boolean }): void;
 	$unregisterWebviewViewProvider(viewType: string): void;
 
-	$setWebviewViewTitle(handle: WebviewPanelHandle, value: string | undefined): void;
+	$setWebviewViewTitle(handle: WebviewHandle, value: string | undefined): void;
 }
 
 export interface WebviewPanelViewStateData {
@@ -645,18 +650,18 @@ export interface WebviewPanelViewStateData {
 }
 
 export interface ExtHostWebviewsShape {
-	$onMessage(handle: WebviewPanelHandle, message: any): void;
-	$onMissingCsp(handle: WebviewPanelHandle, extensionId: string): void;
-	$onDidChangeWebviewPanelViewStates(newState: WebviewPanelViewStateData): void;
-	$onDidDisposeWebviewPanel(handle: WebviewPanelHandle): Promise<void>;
+	$onMessage(handle: WebviewHandle, message: any): void;
+	$onMissingCsp(handle: WebviewHandle, extensionId: string): void;
 }
 
-export interface ExtHostWebviewSerializerShape {
-	$deserializeWebviewPanel(newWebviewHandle: WebviewPanelHandle, viewType: string, title: string, state: any, position: EditorViewColumn, options: modes.IWebviewOptions & modes.IWebviewPanelOptions): Promise<void>;
+export interface ExtHostWebviewPanelsShape {
+	$onDidChangeWebviewPanelViewStates(newState: WebviewPanelViewStateData): void;
+	$onDidDisposeWebviewPanel(handle: WebviewHandle): Promise<void>;
+	$deserializeWebviewPanel(newWebviewHandle: WebviewHandle, viewType: string, title: string, state: any, position: EditorViewColumn, options: modes.IWebviewOptions & modes.IWebviewPanelOptions): Promise<void>;
 }
 
 export interface ExtHostCustomEditorsShape {
-	$resolveWebviewEditor(resource: UriComponents, newWebviewHandle: WebviewPanelHandle, viewType: string, title: string, position: EditorViewColumn, options: modes.IWebviewOptions & modes.IWebviewPanelOptions, cancellation: CancellationToken): Promise<void>;
+	$resolveWebviewEditor(resource: UriComponents, newWebviewHandle: WebviewHandle, viewType: string, title: string, position: EditorViewColumn, options: modes.IWebviewOptions & modes.IWebviewPanelOptions, cancellation: CancellationToken): Promise<void>;
 	$createCustomDocument(resource: UriComponents, viewType: string, backupId: string | undefined, cancellation: CancellationToken): Promise<{ editable: boolean }>;
 	$disposeCustomDocument(resource: UriComponents, viewType: string): Promise<void>;
 
@@ -670,15 +675,15 @@ export interface ExtHostCustomEditorsShape {
 
 	$backup(resource: UriComponents, viewType: string, cancellation: CancellationToken): Promise<string>;
 
-	$onMoveCustomEditor(handle: WebviewPanelHandle, newResource: UriComponents, viewType: string): Promise<void>;
+	$onMoveCustomEditor(handle: WebviewHandle, newResource: UriComponents, viewType: string): Promise<void>;
 }
 
 export interface ExtHostWebviewViewsShape {
-	$resolveWebviewView(webviewHandle: WebviewPanelHandle, viewType: string, state: any, cancellation: CancellationToken): Promise<void>;
+	$resolveWebviewView(webviewHandle: WebviewHandle, viewType: string, state: any, cancellation: CancellationToken): Promise<void>;
 
-	$onDidChangeWebviewViewVisibility(webviewHandle: WebviewPanelHandle, visible: boolean): void;
+	$onDidChangeWebviewViewVisibility(webviewHandle: WebviewHandle, visible: boolean): void;
 
-	$disposeWebviewView(webviewHandle: WebviewPanelHandle): void;
+	$disposeWebviewView(webviewHandle: WebviewHandle): void;
 }
 
 export enum CellKind {
@@ -1716,6 +1721,9 @@ export const MainContext = {
 	MainThreadTelemetry: createMainId<MainThreadTelemetryShape>('MainThreadTelemetry'),
 	MainThreadTerminalService: createMainId<MainThreadTerminalServiceShape>('MainThreadTerminalService'),
 	MainThreadWebviews: createMainId<MainThreadWebviewsShape>('MainThreadWebviews'),
+	MainThreadWebviewPanels: createMainId<MainThreadWebviewPanelsShape>('MainThreadWebviewPanels'),
+	MainThreadWebviewViews: createMainId<MainThreadWebviewViewsShape>('MainThreadWebviewViews'),
+	MainThreadCustomEditors: createMainId<MainThreadCustomEditorsShape>('MainThreadCustomEditors'),
 	MainThreadUrls: createMainId<MainThreadUrlsShape>('MainThreadUrls'),
 	MainThreadWorkspace: createMainId<MainThreadWorkspaceShape>('MainThreadWorkspace'),
 	MainThreadFileSystem: createMainId<MainThreadFileSystemShape>('MainThreadFileSystem'),
@@ -1756,7 +1764,7 @@ export const ExtHostContext = {
 	ExtHostWorkspace: createExtId<ExtHostWorkspaceShape>('ExtHostWorkspace'),
 	ExtHostWindow: createExtId<ExtHostWindowShape>('ExtHostWindow'),
 	ExtHostWebviews: createExtId<ExtHostWebviewsShape>('ExtHostWebviews'),
-	ExtHostWebviewSerializer: createExtId<ExtHostWebviewSerializerShape>('ExtHostWebviewSerializer'),
+	ExtHostWebviewPanels: createExtId<ExtHostWebviewPanelsShape>('ExtHostWebviewPanels'),
 	ExtHostCustomEditors: createExtId<ExtHostCustomEditorsShape>('ExtHostCustomEditors'),
 	ExtHostWebviewViews: createExtId<ExtHostWebviewViewsShape>('ExtHostWebviewViews'),
 	ExtHostEditorInsets: createExtId<ExtHostEditorInsetsShape>('ExtHostEditorInsets'),
