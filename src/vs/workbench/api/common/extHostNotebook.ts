@@ -462,6 +462,10 @@ export class ExtHostNotebookDocument extends Disposable {
 			return [diff.start, diff.deleteCount, outputs];
 		});
 
+		if (!outputDtos.length) {
+			return;
+		}
+
 		await this._proxy.$spliceNotebookCellOutputs(this._viewType, this.uri, cell.handle, outputDtos);
 		this._emitter.emitCellOutputsChange({
 			document: this.notebookDocument,
@@ -745,6 +749,10 @@ export class ExtHostNotebookEditor extends Disposable implements vscode.Notebook
 		}
 
 		return this._proxy.$tryApplyEdits(this.viewType, this.uri, editData.documentVersionId, compressedEdits);
+	}
+
+	revealRange(range: vscode.NotebookCellRange, revealType?: extHostTypes.NotebookEditorRevealType) {
+		this._proxy.$tryRevealRange(this.id, range, revealType || extHostTypes.NotebookEditorRevealType.Default);
 	}
 
 	get viewColumn(): vscode.ViewColumn | undefined {
