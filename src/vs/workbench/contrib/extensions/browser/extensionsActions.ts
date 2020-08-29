@@ -909,7 +909,7 @@ export class EnableForWorkspaceAction extends ExtensionAction {
 		if (this.extension && this.extension.local) {
 			this.enabled = this.extension.state === ExtensionState.Installed
 				&& !this.extensionEnablementService.isEnabled(this.extension.local)
-				&& this.extensionEnablementService.canChangeEnablement(this.extension.local);
+				&& this.extensionEnablementService.canChangeWorkspaceEnablement(this.extension.local);
 		}
 	}
 
@@ -970,7 +970,7 @@ export class DisableForWorkspaceAction extends ExtensionAction {
 		if (this.extension && this.extension.local && this.runningExtensions.some(e => areSameExtensions({ id: e.identifier.value, uuid: e.uuid }, this.extension!.identifier) && this.workspaceContextService.getWorkbenchState() !== WorkbenchState.EMPTY)) {
 			this.enabled = this.extension.state === ExtensionState.Installed
 				&& (this.extension.enablementState === EnablementState.EnabledGlobally || this.extension.enablementState === EnablementState.EnabledWorkspace)
-				&& this.extensionEnablementService.canChangeEnablement(this.extension.local);
+				&& this.extensionEnablementService.canChangeWorkspaceEnablement(this.extension.local);
 		}
 	}
 
