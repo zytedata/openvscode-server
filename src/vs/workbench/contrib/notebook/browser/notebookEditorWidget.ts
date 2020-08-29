@@ -1264,7 +1264,8 @@ export class NotebookEditorWidget extends Disposable implements INotebookEditor 
 		const insertIndex = cell ?
 			(direction === 'above' ? index : nextIndex) :
 			index;
-		const newCell = this._notebookViewModel!.createCell(insertIndex, initialText, language, type, undefined, true);
+		const focused = this._list?.getFocusedElements();
+		const newCell = this._notebookViewModel!.createCell(insertIndex, initialText, language, type, undefined, true, undefined, focused);
 		return newCell as CellViewModel;
 	}
 
@@ -1875,10 +1876,10 @@ registerThemingParticipant((theme, collector) => {
 	}
 
 	const focusedCellBorderColor = theme.getColor(focusedCellBorder);
-	collector.addRule(`.monaco-workbench .notebookOverlay .monaco-list:focus .monaco-list-row.focused .cell-focus-indicator-top:before,
-			.monaco-workbench .notebookOverlay .monaco-list:focus .monaco-list-row.focused .cell-focus-indicator-bottom:before,
-			.monaco-workbench .notebookOverlay .monaco-list:focus .markdown-cell-row.focused:before,
-			.monaco-workbench .notebookOverlay .monaco-list:focus .markdown-cell-row.focused:after {
+	collector.addRule(`.monaco-workbench .notebookOverlay .monaco-list:focus-within .monaco-list-row.focused .cell-focus-indicator-top:before,
+			.monaco-workbench .notebookOverlay .monaco-list:focus-within .monaco-list-row.focused .cell-focus-indicator-bottom:before,
+			.monaco-workbench .notebookOverlay .monaco-list:focus-within .markdown-cell-row.focused:before,
+			.monaco-workbench .notebookOverlay .monaco-list:focus-within .markdown-cell-row.focused:after {
 				border-color: ${focusedCellBorderColor} !important;
 			}`);
 
