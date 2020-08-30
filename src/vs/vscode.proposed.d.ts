@@ -2176,4 +2176,16 @@ declare module 'vscode' {
 		}): Disposable;
 	}
 	//#endregion
+
+	//#region https://github.com/microsoft/vscode/issues/105667
+
+	export interface TreeView<T> {
+		/**
+		 * An optional human-readable description that will be rendered in the title of the view.
+		 * Setting the title description to null, undefined, or empty string will remove the title description from the view.
+		 */
+		titleDescription?: string | undefined;
+	}
+
+	//#endregion
 }
