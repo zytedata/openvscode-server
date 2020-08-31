@@ -1662,7 +1662,7 @@ declare module 'vscode' {
 	}
 
 	export interface NotebookKernelProvider<T extends NotebookKernel = NotebookKernel> {
-		onDidChangeKernels?: Event<void>;
+		onDidChangeKernels?: Event<NotebookDocument | undefined>;
 		provideKernels(document: NotebookDocument, token: CancellationToken): ProviderResult<T[]>;
 		resolveKernel?(kernel: T, document: NotebookDocument, webview: NotebookCommunication, token: CancellationToken): ProviderResult<void>;
 	}
@@ -1717,12 +1717,6 @@ declare module 'vscode' {
 		export function registerNotebookKernelProvider(
 			selector: NotebookDocumentFilter,
 			provider: NotebookKernelProvider
-		): Disposable;
-
-		export function registerNotebookKernel(
-			id: string,
-			selectors: GlobPattern[],
-			kernel: NotebookKernel
 		): Disposable;
 
 		export const onDidOpenNotebookDocument: Event<NotebookDocument>;

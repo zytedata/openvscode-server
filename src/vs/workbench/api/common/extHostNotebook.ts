@@ -795,8 +795,9 @@ export class ExtHostNotebookKernelProviderAdapter extends Disposable {
 		super();
 
 		if (this._provider.onDidChangeKernels) {
-			this._register(this._provider.onDidChangeKernels(() => {
-				this._proxy.$onNotebookKernelChange(this._handle);
+			this._register(this._provider.onDidChangeKernels((e: vscode.NotebookDocument | undefined) => {
+				const uri = e?.uri;
+				this._proxy.$onNotebookKernelChange(this._handle, uri);
 			}));
 		}
 	}
@@ -1074,21 +1075,6 @@ export class ExtHostNotebookController implements ExtHostNotebookShape, ExtHostN
 			if (webComm) {
 				await adapter.resolveNotebook(kernelId, document, webComm.contentProviderComm, token);
 			}
-		});
-	}
-
-	registerNotebookKernel(extension: IExtensionDescription, id: string, selectors: vscode.GlobPattern[], kernel: vscode.NotebookKernel): vscode.Disposable {
-		if (this._notebookKernels.has(id)) {
-			throw new Error(`Notebook kernel for '${id}' already registered`);
-		}
-
-		this._notebookKernels.set(id, { kernel, extension });
-		const transformedSelectors = selectors.map(selector => typeConverters.GlobPattern.from(selector));
-
-		this._proxy.$registerNotebookKernel({ id: extension.identifier, location: extension.extensionLocation, description: extension.description }, id, kernel.label, transformedSelectors, kernel.preloads || []);
-		return new extHostTypes.Disposable(() => {
-			this._notebookKernels.delete(id);
-			this._proxy.$unregisterNotebookKernel(id);
 		});
 	}
 
