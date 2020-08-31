@@ -133,17 +133,6 @@ export interface INotebookRendererInfo {
 	matches(mimeType: string): boolean;
 }
 
-export interface INotebookKernelInfoDto {
-	id: string;
-	label: string,
-	extensionLocation: URI;
-	preloads?: UriComponents[];
-}
-
-export interface INotebookSelectors {
-	readonly filenamePattern?: string;
-}
-
 export interface IStreamOutput {
 	outputKind: CellOutputKind.Text;
 	text: string;
@@ -773,6 +762,7 @@ export interface INotebookKernelInfoDto2 {
 	extensionLocation: URI;
 	providerHandle?: number;
 	description?: string;
+	detail?: string;
 	isPreferred?: boolean;
 	preloads?: UriComponents[];
 }
