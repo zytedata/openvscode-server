@@ -191,6 +191,22 @@ export interface IProductConfiguration {
 	readonly 'editSessions.store'?: Omit<ConfigurationSyncStore, 'insidersUrl' | 'stableUrl'>;
 	readonly darwinUniversalAssetId?: string;
 	readonly profileTemplatesUrl?: string;
+
+	readonly gitpodPreview?: IGitpodPreviewConfiguration;
+}
+
+export interface IProfileTemplateInfo {
+	readonly name: string;
+	readonly url: string;
+}
+
+export interface IGitpodPreviewConfiguration {
+	host: string;
+	log?: {
+		analytics?: boolean;
+		metrics?: boolean;
+		errorReports?: boolean;
+	};
 }
 
 export interface ITunnelApplicationConfig {
