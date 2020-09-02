@@ -30,6 +30,7 @@ import { cwd } from 'vs/base/common/process';
 import * as pfs from 'vs/base/node/pfs';
 import { IProductService } from 'vs/platform/product/common/productService';
 import { ServerConnectionToken, ServerConnectionTokenType } from 'vs/server/node/serverConnectionToken';
+import { IRequestService } from 'vs/platform/request/common/request';
 
 let _SystemExtensionsRoot: string | null = null;
 function getSystemExtensionsRoot(): string {
@@ -59,7 +60,8 @@ export class RemoteAgentEnvironmentChannel implements IServerChannel {
 		private readonly environmentService: IServerEnvironmentService,
 		extensionManagementCLIService: IExtensionManagementCLIService,
 		private readonly logService: ILogService,
-		private readonly productService: IProductService
+		private readonly productService: IProductService,
+		readonly requestService: IRequestService
 	) {
 		this._logger = new class implements ILog {
 			public error(source: string, message: string): void {
@@ -98,6 +100,7 @@ export class RemoteAgentEnvironmentChannel implements IServerChannel {
 					logService.error(error);
 				});
 		}
+
 	}
 
 	async call(_: any, command: string, arg?: any): Promise<any> {
@@ -449,6 +452,16 @@ export class RemoteAgentEnvironmentChannel implements IServerChannel {
 				.then(resolver => ExtensionScanner.scanExtensions(input, this._extensionScannerHost, resolver));
 
 			finalBuiltinExtensions = ExtensionScanner.mergeBuiltinExtensions(builtinExtensions, extraBuiltinExtensions);
+
+			finalBuiltinExtensions = finalBuiltinExtensions.then(extensions => {
+				const ignoreExtensions = [
+					'vscode.github-authentication',
+					'gitpod.gitpod-shared',
+					'gitpod.gitpod-remote-ssh',
+					'gitpod.gitpod-desktop'
+				];
+				return extensions.filter(ext => !ignoreExtensions.includes(ext.identifier.value.toLowerCase()));
+			});
 		}
 
 		return finalBuiltinExtensions;
