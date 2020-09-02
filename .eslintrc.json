@@ -683,6 +683,16 @@
 					}
 				]
 			}
+		},
+		{
+			"files": [
+				"src/vs/gitpod/*"
+			],
+			"rules": {
+				"header/header": [
+					"off"
+				]
+			}
 		}
 	]
 }
