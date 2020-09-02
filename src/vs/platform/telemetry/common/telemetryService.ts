@@ -209,23 +209,24 @@ export class TelemetryService implements ITelemetryService {
 
 const TELEMETRY_SECTION_ID = 'telemetry';
 
-
-Registry.as<IConfigurationRegistry>(Extensions.Configuration).registerConfiguration({
-	'id': TELEMETRY_SECTION_ID,
-	'order': 110,
-	'type': 'object',
-	'title': localize('telemetryConfigurationTitle', "Telemetry"),
-	'properties': {
-		'telemetry.enableTelemetry': {
-			'type': 'boolean',
-			'markdownDescription':
-				!product.privacyStatementUrl ?
-					localize('telemetry.enableTelemetry', "Enable diagnostic data to be collected. This helps us to better understand how {0} is performing and where improvements need to be made.", product.nameLong) :
-					localize('telemetry.enableTelemetryMd', "Enable diagnostic data to be collected. This helps us to better understand how {0} is performing and where improvements need to be made. [Read more]({1}) about what we collect and our privacy statement.", product.nameLong, product.privacyStatementUrl),
-			'default': true,
-			'restricted': true,
-			'scope': ConfigurationScope.APPLICATION,
-			'tags': ['usesOnlineServices', 'telemetry']
+if (!!product.enableTelemetry) {
+	Registry.as<IConfigurationRegistry>(Extensions.Configuration).registerConfiguration({
+		'id': TELEMETRY_SECTION_ID,
+		'order': 110,
+		'type': 'object',
+		'title': localize('telemetryConfigurationTitle', "Telemetry"),
+		'properties': {
+			'telemetry.enableTelemetry': {
+				'type': 'boolean',
+				'markdownDescription':
+					!product.privacyStatementUrl ?
+						localize('telemetry.enableTelemetry', "Enable diagnostic data to be collected. This helps us to better understand how {0} is performing and where improvements need to be made.", product.nameLong) :
+						localize('telemetry.enableTelemetryMd', "Enable diagnostic data to be collected. This helps us to better understand how {0} is performing and where improvements need to be made. [Read more]({1}) about what we collect and our privacy statement.", product.nameLong, product.privacyStatementUrl),
+				'default': true,
+				'restricted': true,
+				'scope': ConfigurationScope.APPLICATION,
+				'tags': ['usesOnlineServices', 'telemetry']
+			}
 		}
-	}
-});
+	});
+}
