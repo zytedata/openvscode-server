@@ -85,6 +85,8 @@ import { EncryptionMainService } from 'vs/platform/encryption/node/encryptionMai
 import { RemoteTelemetryChannel } from 'vs/server/node/remoteTelemetryChannel';
 import { parseServerConnectionToken, ServerConnectionToken, ServerConnectionTokenParseError, ServerConnectionTokenType } from 'vs/server/node/serverConnectionToken';
 import { IEncryptionMainService } from 'vs/platform/encryption/common/encryptionService';
+// eslint-disable-next-line code-import-patterns
+import { handleGitpodCLIRequest } from 'vs/gitpod/node/customServerIntegration';
 
 const SHUTDOWN_TIMEOUT = 5 * 60 * 1000;
 
@@ -350,7 +352,7 @@ export class RemoteExtensionHostAgentServer extends Disposable {
 		services.set(ICredentialsMainService, new SyncDescriptor(CredentialsMainService, [true]));
 
 		return instantiationService.invokeFunction(accessor => {
-			const remoteExtensionEnvironmentChannel = new RemoteAgentEnvironmentChannel(this._connectionToken, this._environmentService, extensionManagementCLIService, this._logService, this._productService);
+			const remoteExtensionEnvironmentChannel = new RemoteAgentEnvironmentChannel(this._connectionToken, this._environmentService, extensionManagementCLIService, this._logService, this._productService, accessor.get(IRequestService));
 			this._socketServer.registerChannel('remoteextensionsenvironment', remoteExtensionEnvironmentChannel);
 
 			const telemetryChannel = new RemoteTelemetryChannel(accessor.get(IRemoteTelemetryService), appInsightsAppender);
@@ -393,9 +395,9 @@ export class RemoteExtensionHostAgentServer extends Disposable {
 
 	public async handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
 		// Only serve GET requests
-		if (req.method !== 'GET') {
-			return serveError(req, res, 405, `Unsupported method ${req.method}`);
-		}
+		// if (req.method !== 'GET') {
+		// 	return serveError(req, res, 405, `Unsupported method ${req.method}`);
+		// }
 
 		if (!req.url) {
 			return serveError(req, res, 400, `Bad request.`);
@@ -406,6 +408,10 @@ export class RemoteExtensionHostAgentServer extends Disposable {
 
 		if (!pathname) {
 			return serveError(req, res, 400, `Bad request.`);
+		}
+
+		if (handleGitpodCLIRequest(pathname, req, res)) {
+			return;
 		}
 
 		// Version
@@ -1002,7 +1008,7 @@ export async function createServer(address: string | net.AddressInfo | null, arg
 		console.warn(connectionToken.message);
 		process.exit(1);
 	}
-	const hasWebClient = fs.existsSync(FileAccess.asFileUri('vs/code/browser/workbench/workbench.html', require).fsPath);
+	const hasWebClient = fs.existsSync(FileAccess.asFileUri('vs/gitpod/browser/workbench/workbench.html', require).fsPath);
 
 	if (hasWebClient && address && typeof address !== 'string') {
 		// ships the web ui!
