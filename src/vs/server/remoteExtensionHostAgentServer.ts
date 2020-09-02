@@ -77,6 +77,7 @@ import { SpdLogLogger } from 'vs/platform/log/node/spdlogLog';
 import { IPtyService, TerminalSettingId } from 'vs/platform/terminal/common/terminal';
 import { PtyHostService } from 'vs/platform/terminal/node/ptyHostService';
 import { IRemoteTelemetryService, RemoteNullTelemetryService, RemoteTelemetryService } from 'vs/server/remoteTelemetryService';
+import { handleGitpodCLIRequest } from 'vs/gitpod/node/customServerIntegration';
 
 const SHUTDOWN_TIMEOUT = 5 * 60 * 1000;
 
@@ -323,7 +324,7 @@ export class RemoteExtensionHostAgentServer extends Disposable {
 		services.set(IPtyService, ptyService);
 
 		return instantiationService.invokeFunction(accessor => {
-			const remoteExtensionEnvironmentChannel = new RemoteAgentEnvironmentChannel(this._connectionToken, this._environmentService, extensionManagementCLIService, this._logService, accessor.get(IRemoteTelemetryService), appInsightsAppender, this._productService);
+			const remoteExtensionEnvironmentChannel = new RemoteAgentEnvironmentChannel(this._connectionToken, this._environmentService, extensionManagementCLIService, this._logService, accessor.get(IRemoteTelemetryService), appInsightsAppender, this._productService, accessor.get(IRequestService));
 			this._socketServer.registerChannel('remoteextensionsenvironment', remoteExtensionEnvironmentChannel);
 
 			this._socketServer.registerChannel(REMOTE_TERMINAL_CHANNEL_NAME, new RemoteTerminalChannel(this._environmentService, this._logService, ptyService, this._productService));
@@ -357,9 +358,9 @@ export class RemoteExtensionHostAgentServer extends Disposable {
 
 	public async handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
 		// Only serve GET requests
-		if (req.method !== 'GET') {
-			return serveError(req, res, 405, `Unsupported method ${req.method}`);
-		}
+		// if (req.method !== 'GET') {
+		// 	return serveError(req, res, 405, `Unsupported method ${req.method}`);
+		// }
 
 		if (!req.url) {
 			return serveError(req, res, 400, `Bad request.`);
@@ -370,6 +371,10 @@ export class RemoteExtensionHostAgentServer extends Disposable {
 
 		if (!pathname) {
 			return serveError(req, res, 400, `Bad request.`);
+		}
+
+		if (handleGitpodCLIRequest(pathname, req, res)) {
+			return;
 		}
 
 		// Version
@@ -976,7 +981,7 @@ export async function createServer(address: string | net.AddressInfo | null, arg
 	}
 
 	const { connectionToken, connectionTokenIsMandatory } = parseConnectionToken(args);
-	const hasWebClient = fs.existsSync(FileAccess.asFileUri('vs/code/browser/workbench/workbench.html', require).fsPath);
+	const hasWebClient = fs.existsSync(FileAccess.asFileUri('vs/gitpod/browser/workbench/workbench.html', require).fsPath);
 
 	if (hasWebClient && address && typeof address !== 'string') {
 		// ships the web ui!
