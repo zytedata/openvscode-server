@@ -1,0 +1,387 @@
+{
+  "name": "gitpod",
+  "displayName": "%displayName%",
+  "description": "%description%",
+  "publisher": "gitpod",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.49.0"
+  },
+  "enableProposedApi": true,
+  "categories": [
+    "Other"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "activationEvents": [
+    "*",
+    "onAuthenticationRequest:gitpod",
+    "onAuthenticationRequest:github",
+    "onCommand:gitpod.api.preview"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "gitpod.stop.ws",
+        "title": "%stopWorkspace%",
+        "enablement": "gitpod.workspaceOwned == true"
+      },
+      {
+        "command": "gitpod.open.settings",
+        "title": "%openSettings%"
+      },
+      {
+        "command": "gitpod.open.accessControl",
+        "title": "%openAccessControl%"
+      },
+      {
+        "command": "gitpod.open.context",
+        "title": "%openContext%"
+      },
+      {
+        "command": "gitpod.open.dashboard",
+        "title": "%openDashboard%"
+      },
+      {
+        "command": "gitpod.open.documentation",
+        "title": "%openDocumentation%"
+      },
+      {
+        "command": "gitpod.open.follow",
+        "title": "%openFollow%"
+      },
+      {
+        "command": "gitpod.open.community",
+        "title": "%openCommunity%"
+      },
+      {
+        "command": "gitpod.reportIssue",
+        "title": "%reportIssue%"
+      },
+      {
+        "command": "gitpod.upgradeSubscription",
+        "title": "%upgradeSubscription%",
+        "enablement": "gitpod.workspaceOwned == true"
+      },
+      {
+        "command": "gitpod.ExtendTimeout",
+        "title": "%extendTimeout%",
+        "enablement": "gitpod.workspaceOwned == true"
+      },
+      {
+        "command": "gitpod.takeSnapshot",
+        "title": "%takeSnapshot%",
+        "enablement": "gitpod.workspaceOwned == true"
+      },
+      {
+        "command": "gitpod.shareWorkspace",
+        "title": "%shareWorkspace%",
+        "enablement": "gitpod.workspaceOwned == true && gitpod.workspaceShared == false"
+      },
+      {
+        "command": "gitpod.stopSharingWorkspace",
+        "title": "%stopSharingWorkspace%",
+        "enablement": "gitpod.workspaceOwned == true && gitpod.workspaceShared == true"
+      },
+      {
+        "command": "gitpod.ports.openBrowser",
+        "title": "%openBrowser%",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "gitpod.ports.retryAutoExpose",
+        "title": "%retryAutoExpose%",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "gitpod.ports.preview",
+        "title": "%openPreview%",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "gitpod.ports.makePrivate",
+        "title": "%makePrivate%",
+        "icon": "$(lock)"
+      },
+      {
+        "command": "gitpod.ports.makePublic",
+        "title": "%makePublic%",
+        "icon": "$(unlock)"
+      },
+      {
+        "command": "gitpod.ports.tunnelNetwork",
+        "title": "%tunnelNetwork%",
+        "icon": "$(eye-closed)"
+      },
+      {
+        "command": "gitpod.ports.tunnelHost",
+        "title": "%tunnelHost%",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "gitpod.extensions.addToConfig",
+        "title": "%addToConfig%"
+      },
+      {
+        "command": "gitpod.dev.connectLocalApp",
+        "title": "%connectLocalApp%"
+      },
+      {
+        "command": "gitpod.dev.enableForwardedPortsView",
+        "title": "%enableForwardedPortsView%"
+      }
+    ],
+    "menus": {
+      "extension/context": [
+        {
+          "command": "gitpod.extensions.addToConfig",
+          "group": "2_configure"
+        }
+      ],
+      "menuBar/home": [
+        {
+          "command": "gitpod.open.context",
+          "group": "gitpod@10"
+        },
+        {
+          "command": "gitpod.open.documentation",
+          "group": "gitpod@20"
+        },
+        {
+          "command": "gitpod.takeSnapshot",
+          "group": "gitpod@30",
+          "when": "gitpod.workspaceOwned == true"
+        },
+        {
+          "command": "gitpod.shareWorkspace",
+          "group": "gitpod@40",
+          "when": "gitpod.workspaceOwned == true && gitpod.workspaceShared == false"
+        },
+        {
+          "command": "gitpod.stopSharingWorkspace",
+          "group": "gitpod@40",
+          "when": "gitpod.workspaceOwned == true && gitpod.workspaceShared == true"
+        },
+        {
+          "command": "gitpod.stop.ws",
+          "group": "gitpod@50",
+          "when": "gitpod.workspaceOwned == true"
+        }
+      ],
+      "accounts/context": [
+        {
+          "command": "gitpod.open.settings",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitpod.open.accessControl",
+          "group": "navigation@20"
+        },
+        {
+          "command": "gitpod.upgradeSubscription",
+          "group": "navigation@30",
+          "when": "gitpod.workspaceOwned == true"
+        },
+        {
+          "command": "gitpod.ExtendTimeout",
+          "group": "navigation@50",
+          "when": "gitpod.workspaceOwned == true"
+        }
+      ],
+      "menuBar/help": [
+        {
+          "command": "gitpod.open.follow",
+          "group": "z_about2@10"
+        },
+        {
+          "command": "gitpod.open.community",
+          "group": "z_about2@20"
+        },
+        {
+          "command": "gitpod.reportIssue",
+          "group": "z_about2@30"
+        }
+      ],
+      "statusBar/remoteIndicator": [
+        {
+          "command": "gitpod.stop.ws",
+          "group": "remote_00_gitpod_navigation@10",
+          "when": "gitpod.workspaceOwned == true"
+        },
+        {
+          "command": "gitpod.open.settings",
+          "group": "remote_00_gitpod_navigation@20"
+        },
+        {
+          "command": "gitpod.open.accessControl",
+          "group": "remote_00_gitpod_navigation@30"
+        },
+        {
+          "command": "gitpod.open.context",
+          "group": "remote_00_gitpod_navigation@40"
+        },
+        {
+          "command": "gitpod.open.dashboard",
+          "group": "remote_00_gitpod_navigation@50"
+        },
+        {
+          "command": "gitpod.open.documentation",
+          "group": "remote_00_gitpod_navigation@60"
+        },
+        {
+          "command": "gitpod.open.follow",
+          "group": "remote_00_gitpod_navigation@70"
+        },
+        {
+          "command": "gitpod.open.community",
+          "group": "remote_00_gitpod_navigation@80"
+        },
+        {
+          "command": "gitpod.reportIssue",
+          "group": "remote_00_gitpod_navigation@90"
+        },
+        {
+          "command": "gitpod.upgradeSubscription",
+          "group": "remote_00_gitpod_navigation@100",
+          "when": "gitpod.workspaceOwned == true"
+        },
+        {
+          "command": "gitpod.ExtendTimeout",
+          "group": "remote_00_gitpod_navigation@110",
+          "when": "gitpod.workspaceOwned == true"
+        },
+        {
+          "command": "gitpod.takeSnapshot",
+          "group": "remote_00_gitpod_navigation@120",
+          "when": "gitpod.workspaceOwned == true"
+        },
+        {
+          "command": "gitpod.shareWorkspace",
+          "group": "remote_00_gitpod_navigation@130",
+          "when": "gitpod.workspaceOwned == true && gitpod.workspaceShared == false"
+        },
+        {
+          "command": "gitpod.stopSharingWorkspace",
+          "group": "remote_00_gitpod_navigation@130",
+          "when": "gitpod.workspaceOwned == true && gitpod.workspaceShared == true"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "gitpod.ports.tunnelNetwork",
+          "when": "view == gitpod.workspace && viewItem =~ /host/ && viewItem =~ /tunneled/",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitpod.ports.tunnelHost",
+          "when": "view == gitpod.workspace && viewItem =~ /network/ && viewItem =~ /tunneled/",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitpod.ports.makePublic",
+          "when": "view == gitpod.workspace && viewItem =~ /private/",
+          "group": "inline@2"
+        },
+        {
+          "command": "gitpod.ports.makePrivate",
+          "when": "view == gitpod.workspace && viewItem =~ /public/",
+          "group": "inline@2"
+        },
+        {
+          "command": "gitpod.ports.preview",
+          "when": "view == gitpod.workspace && viewItem =~ /exposed/ || viewItem =~ /tunneled/",
+          "group": "inline@3"
+        },
+        {
+          "command": "gitpod.ports.openBrowser",
+          "when": "view == gitpod.workspace && viewItem =~ /exposed/ || viewItem =~ /tunneled/",
+          "group": "inline@4"
+        },
+        {
+          "command": "gitpod.ports.retryAutoExpose",
+          "when": "view == gitpod.workspace && viewItem =~ /failed/",
+          "group": "inline@5"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "gitpod.ports.preview",
+          "when": "false"
+        },
+        {
+          "command": "gitpod.ports.openBrowser",
+          "when": "false"
+        },
+        {
+          "command": "gitpod.ports.retryAutoExpose",
+          "when": "false"
+        },
+        {
+          "command": "gitpod.ports.makePublic",
+          "when": "false"
+        },
+        {
+          "command": "gitpod.ports.makePrivate",
+          "when": "false"
+        },
+        {
+          "command": "gitpod.ports.tunnelNetwork",
+          "when": "false"
+        },
+        {
+          "command": "gitpod.ports.tunnelHost",
+          "when": "false"
+        },
+        {
+          "command": "gitpod.dev.connectLocalApp",
+          "when": "gitpod.localAppConnected == false"
+        }
+      ]
+    },
+    "views": {
+      "remote": [
+        {
+          "id": "gitpod.workspace",
+          "name": "Gitpod Workspace"
+        }
+      ]
+    },
+    "authentication": [
+      {
+        "id": "gitpod",
+        "label": "Gitpod"
+      },
+      {
+        "id": "github",
+        "label": "GitHub"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "gulp compile-extension:gitpod",
+    "watch": "gulp watch-extension:gitpod",
+    "vscode:prepublish": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "^10.12.21",
+    "@types/node-fetch": "^2.5.8",
+    "@types/ps-tree": "^1.1.0",
+    "@types/uuid": "^8.3.0",
+    "@types/ws": "^7.2.6"
+  },
+  "dependencies": {
+    "@gitpod/gitpod-protocol": "main",
+    "@gitpod/supervisor-api-grpc": "main",
+    "bufferutil": "^4.0.1",
+    "node-fetch": "^2.6.1",
+    "reconnecting-websocket": "^4.4.0",
+    "utf-8-validate": "^5.0.2",
+    "uuid": "^8.3.1",
+    "vscode-jsonrpc": "^5.0.1",
+    "vscode-nls": "^5.0.0",
+    "ws": "^7.3.1",
+    "yaml": "^1.10.0"
+  }
+}

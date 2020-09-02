@@ -4,6 +4,21 @@
 		{
 			"type": "node",
 			"request": "launch",
+			"name": "Gitpod Code Server",
+			"args": [
+				"${workspaceFolder}/out/gitpod.js"
+			],
+			"outFiles": [
+				"${workspaceFolder}/out/**/*.js"
+			],
+			"env": {
+				"NODE_ENV": "development",
+				"VSCODE_DEV": "1"
+			}
+		},
+		{
+			"type": "node",
+			"request": "launch",
 			"name": "Code Server",
 			"args": [
 				"${workspaceFolder}/out/server.js"

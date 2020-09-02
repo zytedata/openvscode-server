@@ -800,6 +800,21 @@
 				]
 			},
 			{
+				"target": "**/vs/gitpod/browser/**",
+				"restrictions": [
+					"vs/nls",
+					"vs/css!./**/*",
+					"**/vs/base/**/{common,browser}/**",
+					"**/vs/base/parts/**/{common,browser}/**",
+					"**/vs/platform/**/{common,browser}/**",
+					"**/vs/code/**/{common,browser}/**",
+					"**/vs/workbench/workbench.web.api",
+					"@gitpod/gitpod-protocol/lib/**",
+					"@improbable-eng/grpc-web",
+					"@gitpod/local-app-api-grpcweb"
+				]
+			},
+			{
 				"target": "**/vs/code/node/**",
 				"restrictions": [
 					"vs/nls",

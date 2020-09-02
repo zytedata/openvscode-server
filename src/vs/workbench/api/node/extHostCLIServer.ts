@@ -33,6 +33,12 @@ export interface StatusPipeArgs {
 	type: 'status';
 }
 
+export interface RunCommandPipeArgs {
+	type: 'command';
+	command: string;
+	args: any[];
+}
+
 export interface ExtensionManagementPipeArgs {
 	type: 'extensionManagement';
 	list?: { showVersions?: boolean, category?: string; };
@@ -41,7 +47,7 @@ export interface ExtensionManagementPipeArgs {
 	force?: boolean;
 }
 
-export type PipeCommand = OpenCommandPipeArgs | StatusPipeArgs | OpenExternalCommandPipeArgs | ExtensionManagementPipeArgs;
+export type PipeCommand = OpenCommandPipeArgs | StatusPipeArgs | RunCommandPipeArgs | OpenExternalCommandPipeArgs | ExtensionManagementPipeArgs;
 
 export interface ICommandsExecuter {
 	executeCommand<T>(id: string, ...args: any[]): Promise<T>;
@@ -92,6 +98,10 @@ export class CLIServerBase {
 					break;
 				case 'status':
 					this.getStatus(data, res);
+					break;
+				case 'command':
+					this.runCommand(data, res)
+						.catch(this.logService.error);
 					break;
 				case 'extensionManagement':
 					this.manageExtensions(data, res)
@@ -183,6 +193,28 @@ export class CLIServerBase {
 			const status = await this._commands.executeCommand('_remoteCLI.getSystemStatus');
 			res.writeHead(200);
 			res.write(status);
+			res.end();
+		} catch (err) {
+			res.writeHead(500);
+			res.write(String(err), err => {
+				if (err) {
+					this.logService.error(err);
+				}
+			});
+			res.end();
+		}
+	}
+
+	private async runCommand(data: RunCommandPipeArgs, res: http.ServerResponse) {
+		try {
+			const { command, args } = data;
+			const result = await this._commands.executeCommand(command, ...args);
+			res.writeHead(200);
+			res.write(JSON.stringify(result || ''), err => {
+				if (err) {
+					this.logService.error(err);
+				}
+			});
 			res.end();
 		} catch (err) {
 			res.writeHead(500);
