@@ -15,7 +15,7 @@ ARG TARGET_VNC_PORT=5901
 ARG VNC_PASSWORD="vscode"
 
 # noVNC (VNC web client) options
-ARG INSTALL_NOVNC="true"
+ARG INSTALL_NOVNC="false"
 ARG NOVNC_VERSION=1.1.0
 ARG TARGET_NOVNC_PORT=6080
 ARG WEBSOCKETIFY_VERSION=0.9.0
@@ -40,7 +40,7 @@ ENV DBUS_SESSION_BUS_ADDRESS="autolaunch:" \
 	EDITOR="nano"
 
 # Configure apt and install packages
-RUN apt-get update \
+RUN sudo apt-get update \
 	&& export DEBIAN_FRONTEND=noninteractive \
 	#
 	# Install the Cascadia Code fonts - https://github.com/microsoft/cascadia-code
@@ -51,7 +51,7 @@ RUN apt-get update \
 	&& rm -rf /tmp/cascadia-fonts.zip /tmp/cascadia-fonts \
 	#
 	# Install X11, fluxbox and VS Code dependencies
-	&& apt-get -y install --no-install-recommends \
+	&& sudo apt-get -y install --no-install-recommends \
 		xvfb \
 		x11vnc \
 		fluxbox \
@@ -90,32 +90,17 @@ RUN apt-get update \
 		&& rm /tmp/novnc-install.zip \
 		&& curl -sSL https://github.com/novnc/websockify/archive/v${WEBSOCKETIFY_VERSION}.zip -o /tmp/websockify-install.zip \
 		&& unzip /tmp/websockify-install.zip -d /usr/local/novnc \
-		&& apt-get -y install --no-install-recommends python-numpy \
+		&& sudo apt-get -y install --no-install-recommends python-numpy \
 		&& ln -s /usr/local/novnc/websockify-${WEBSOCKETIFY_VERSION} /usr/local/novnc/noVNC-${NOVNC_VERSION}/utils/websockify \
 		&& rm /tmp/websockify-install.zip; \
 	fi \
 	#
 	# [Optional] Install Firefox
 	&& if [ "${INSTALL_FIREFOX}" = "true" ]; then \
-		apt-get -y install --no-install-recommends firefox-esr; \
+		sudo apt-get -y install --no-install-recommends firefox-esr; \
 	fi \
 	#
 	# Clean up
-	&& apt-get autoremove -y \
-	&& apt-get clean -y \
+	&& sudo apt-get autoremove -y \
+	&& sudo apt-get clean -y \
 	&& rm -rf /var/lib/apt/lists/*
-
-COPY bin/init-dev-container.sh /usr/local/share/
-COPY bin/set-resolution /usr/local/bin/
-COPY fluxbox/* /root/.fluxbox/
-COPY fluxbox/* /home/${USERNAME}/.fluxbox/
-
-# Update privs, owners of config files
-RUN mkdir -p /var/run/dbus /root/.vnc /home/${USERNAME}/.vnc \
-	&& touch /root/.Xmodmap /home/${USERNAME}/.Xmodmap \
-	&& echo "${VNC_PASSWORD}" | tee /root/.vnc/passwd > /home/${USERNAME}/.vnc/passwd \
-	&& chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/.Xmodmap /home/${USERNAME}/.fluxbox /home/${USERNAME}/.vnc \
-	&& chmod +x /usr/local/share/init-dev-container.sh /usr/local/bin/set-resolution
-
-ENTRYPOINT ["/usr/local/share/init-dev-container.sh"]
-CMD ["sleep", "infinity"]

@@ -43,7 +43,8 @@ export class FileWatcher extends Disposable {
 					AMD_ENTRYPOINT: 'vs/platform/files/node/watcher/unix/watcherApp',
 					PIPE_LOGGING: 'true',
 					VERBOSE_LOGGING: 'true' // transmit console logs from server to client
-				}
+				},
+				freshExecArgv: true
 			}
 		));
 
