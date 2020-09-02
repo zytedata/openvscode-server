@@ -169,10 +169,10 @@ function hygiene(some) {
 	const productJson = es.through(function (file) {
 		const product = JSON.parse(file.contents.toString('utf8'));
 
-		if (product.extensionsGallery) {
-			console.error(`product.json: Contains 'extensionsGallery'`);
+		/* if (product.extensionsGallery) {
+			console.error('product.json: Contains "extensionsGallery"');
 			errorCount++;
-		}
+		} */
 
 		this.emit('data', file);
 	});
@@ -200,6 +200,7 @@ function hygiene(some) {
 	});
 
 	const copyrights = es.through(function (file) {
+		if (file.relative.indexOf('gitpod') === -1) {
 		const lines = file.__lines;
 
 		for (let i = 0; i < copyrightHeaderLines.length; i++) {
@@ -209,6 +210,7 @@ function hygiene(some) {
 				break;
 			}
 		}
+	}
 
 		this.emit('data', file);
 	});
