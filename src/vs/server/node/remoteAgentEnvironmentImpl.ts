@@ -83,6 +83,7 @@ export class RemoteAgentEnvironmentChannel implements IServerChannel {
 					logService.error(error);
 				});
 		}
+
 	}
 
 	async call(_: any, command: string, arg?: any): Promise<any> {
@@ -441,6 +442,16 @@ export class RemoteAgentEnvironmentChannel implements IServerChannel {
 				.then(resolver => ExtensionScanner.scanExtensions(input, this.logService, this._fileService, resolver));
 
 			finalBuiltinExtensions = ExtensionScanner.mergeBuiltinExtensions(builtinExtensions, extraBuiltinExtensions);
+
+			finalBuiltinExtensions = finalBuiltinExtensions.then(extensions => {
+				const ignoreExtensions = [
+					'vscode.github-authentication',
+					'gitpod.gitpod-shared',
+					'gitpod.gitpod-remote-ssh',
+					'gitpod.gitpod-desktop'
+				];
+				return extensions.filter(ext => !ignoreExtensions.includes(ext.identifier.value.toLowerCase()));
+			});
 		}
 
 		return finalBuiltinExtensions;
