@@ -72,6 +72,8 @@ import { IExtensionsProfileScannerService } from 'vs/platform/extensionManagemen
 import { IUserDataProfilesService } from 'vs/platform/userDataProfile/common/userDataProfile';
 import { NullPolicyService } from 'vs/platform/policy/common/policy';
 import { OneDataSystemAppender } from 'vs/platform/telemetry/node/1dsAppender';
+// eslint-disable-next-line local/code-import-patterns
+import { GitpodInsightsAppender } from 'vs/gitpod/node/gitpodInsightsAppender';
 import { LoggerService } from 'vs/platform/log/node/loggerService';
 import { URI } from 'vs/base/common/uri';
 import { ServerUserDataProfilesService } from 'vs/platform/userDataProfile/node/userDataProfile';
@@ -82,6 +84,7 @@ import { localize } from 'vs/nls';
 import { RemoteExtensionsScannerChannel, RemoteExtensionsScannerService } from 'vs/server/node/remoteExtensionsScanner';
 import { RemoteExtensionsScannerChannelName } from 'vs/platform/remote/common/remoteExtensionsScanner';
 import { RemoteUserDataProfilesServiceChannel } from 'vs/platform/userDataProfile/common/userDataProfileIpc';
+import { DownloadService } from 'vs/platform/download/common/downloadService';
 
 const eventPrefix = 'monacoworkbench';
 
@@ -151,10 +154,12 @@ export async function setupServerServices(connectionToken: ServerConnectionToken
 	let oneDsAppender: ITelemetryAppender = NullAppender;
 	const isInternal = isInternalTelemetry(productService, configurationService);
 	if (supportsTelemetry(productService, environmentService)) {
-		if (productService.aiConfig && productService.aiConfig.ariaKey) {
+		if (productService.aiConfig && productService.aiConfig.ariaKey !== 'foo') {
 			oneDsAppender = new OneDataSystemAppender(isInternal, eventPrefix, null, productService.aiConfig.ariaKey);
 			disposables.add(toDisposable(() => oneDsAppender?.flush())); // Ensure the AI appender is disposed so that it flushes remaining data
 		}
+
+		oneDsAppender = new GitpodInsightsAppender(productService.nameShort, productService.version);
 
 		const config: ITelemetryServiceConfig = {
 			appenders: [oneDsAppender],
@@ -217,7 +222,8 @@ export async function setupServerServices(connectionToken: ServerConnectionToken
 
 		socketServer.registerChannel(REMOTE_TERMINAL_CHANNEL_NAME, new RemoteTerminalChannel(environmentService, logService, ptyService, productService, extensionManagementService, configurationService));
 
-		const remoteExtensionsScanner = new RemoteExtensionsScannerService(instantiationService.createInstance(ExtensionManagementCLI), environmentService, userDataProfilesService, extensionsScannerService, logService);
+		const nativeDownloadService = new DownloadService(accessor.get(IRequestService), accessor.get(IFileService));
+		const remoteExtensionsScanner = new RemoteExtensionsScannerService(instantiationService.createInstance(ExtensionManagementCLI), environmentService, userDataProfilesService, extensionsScannerService, logService, nativeDownloadService);
 		socketServer.registerChannel(RemoteExtensionsScannerChannelName, new RemoteExtensionsScannerChannel(remoteExtensionsScanner, (ctx: RemoteAgentConnectionContext) => getUriTransformer(ctx.remoteAuthority)));
 
 		const remoteFileSystemChannel = new RemoteAgentFileSystemProviderChannel(logService, environmentService);

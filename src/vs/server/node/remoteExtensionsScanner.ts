@@ -22,6 +22,10 @@ import { IServerEnvironmentService } from 'vs/server/node/serverEnvironmentServi
 import { dedupExtensions } from 'vs/workbench/services/extensions/common/extensionsUtil';
 import { Schemas } from 'vs/base/common/network';
 import { IRemoteExtensionsScannerService } from 'vs/platform/remote/common/remoteExtensionsScanner';
+import { IDownloadService } from 'vs/platform/download/common/download';
+import { joinPath } from 'vs/base/common/resources';
+import { tmpdir } from 'os';
+import { generateUuid } from 'vs/base/common/uuid';
 
 export class RemoteExtensionsScannerService implements IRemoteExtensionsScannerService {
 
@@ -35,6 +39,7 @@ export class RemoteExtensionsScannerService implements IRemoteExtensionsScannerS
 		private readonly _userDataProfilesService: IUserDataProfilesService,
 		private readonly _extensionsScannerService: IExtensionsScannerService,
 		private readonly _logService: ILogService,
+		private readonly _downloadService: IDownloadService,
 	) {
 		if (environmentService.args['install-builtin-extension']) {
 			const installOptions: InstallOptions = { isMachineScoped: !!environmentService.args['do-not-sync'], installPreReleaseVersion: !!environmentService.args['pre-release'] };
@@ -49,9 +54,27 @@ export class RemoteExtensionsScannerService implements IRemoteExtensionsScannerS
 
 		const extensionsToInstall = environmentService.args['install-extension'];
 		if (extensionsToInstall) {
-			const idsOrVSIX = extensionsToInstall.map(input => /\.vsix$/i.test(input) ? URI.file(isAbsolute(input) ? input : join(cwd(), input)) : input);
+			const idsOrVSIX = extensionsToInstall.map(input => {
+				if (/^https?:\/\//.test(input)) {
+					return URI.parse(input);
+				}
+				return /\.vsix$/i.test(input) ? URI.file(isAbsolute(input) ? input : join(cwd(), input)) : input;
+			});
+			const whenExtensionDownloaded = Promise.all(idsOrVSIX.map(async extension => {
+				if (extension instanceof URI && extension.scheme !== Schemas.file) {
+					const location = joinPath(URI.file(tmpdir()), generateUuid());
+					try {
+						await this._downloadService.download(extension, location);
+					} catch (e) {
+						_logService.error(`Error downloading external vsix`, e);
+					}
+					return location;
+				} else {
+					return extension;
+				}
+			}));
 			this._whenExtensionsReady
-				.then(() => extensionManagementCLI.installExtensions(idsOrVSIX, [], { isMachineScoped: !!environmentService.args['do-not-sync'], installPreReleaseVersion: !!environmentService.args['pre-release'] }, !!environmentService.args['force']))
+				.then(() => whenExtensionDownloaded.then(idsOrVSIX => extensionManagementCLI.installExtensions(idsOrVSIX, [], { isMachineScoped: !!environmentService.args['do-not-sync'], installPreReleaseVersion: !!environmentService.args['pre-release'] }, !!environmentService.args['force'])))
 				.then(null, error => {
 					_logService.error(error);
 				});
