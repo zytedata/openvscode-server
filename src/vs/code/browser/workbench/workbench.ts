@@ -11,6 +11,8 @@ import { localize } from 'vs/nls';
 import { isFolderToOpen, isWorkspaceToOpen } from 'vs/platform/windows/common/windows';
 import { create, IHomeIndicator, IProductQualityChangeHandler, IWorkbenchConstructionOptions, IWorkspace, IWorkspaceProvider } from 'vs/workbench/workbench.web.api';
 import { defaultWebSocketFactory } from 'vs/platform/remote/browser/browserSocketFactory';
+import { join } from 'vs/base/common/path';
+import product from 'vs/platform/product/common/product';
 
 class WorkspaceProvider implements IWorkspaceProvider {
 
@@ -101,7 +103,20 @@ class WorkspaceProvider implements IWorkspaceProvider {
 	}
 }
 
-(function () {
+(async function () {
+	let supervisorHost = window.location.host;
+	// running from sources
+	if (product.nameShort.endsWith(' Dev')) {
+		supervisorHost = supervisorHost.substring(supervisorHost.indexOf('-') + 1);
+	}
+	const infoResponse = await fetch(window.location.protocol + '//' + supervisorHost + '/_supervisor/v1/info/workspace', {
+		credentials: 'include'
+	});
+	const info: {
+		workspaceLocationFile?: string
+		workspaceLocationFolder?: string
+		userHome: string
+	} = await infoResponse.json();
 
 	const remoteAuthority = window.location.host + ':443';
 	const remoteUserDataElement = document.getElementById('vscode-remote-user-data-uri');
@@ -109,7 +124,7 @@ class WorkspaceProvider implements IWorkspaceProvider {
 		remoteUserDataElement.setAttribute('data-settings', JSON.stringify({
 			scheme: 'vscode-remote',
 			authority: remoteAuthority,
-			path: '/gitpod-user-data'
+			path: join(info.userHome, product.dataFolderName)
 		}));
 	}
 
@@ -162,13 +177,23 @@ class WorkspaceProvider implements IWorkspaceProvider {
 	});
 
 	if (!foundWorkspace) {
-		workspace = {
-			folderUri: URI.from({
-				scheme: 'vscode-remote',
-				authority: remoteAuthority,
-				path: '/gitpod-folder'
-			})
-		};
+		if (info.workspaceLocationFile) {
+			workspace = {
+				workspaceUri: URI.from({
+					scheme: 'vscode-remote',
+					authority: remoteAuthority,
+					path: info.workspaceLocationFile
+				})
+			};
+		} else if (info.workspaceLocationFolder) {
+			workspace = {
+				folderUri: URI.from({
+					scheme: 'vscode-remote',
+					authority: remoteAuthority,
+					path: info.workspaceLocationFolder
+				})
+			};
+		}
 	}
 
 	// Workspace Provider
