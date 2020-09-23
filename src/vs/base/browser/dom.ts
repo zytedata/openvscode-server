@@ -1202,17 +1202,7 @@ export function computeScreenAwareSize(cssPx: number): number {
  * See https://mathiasbynens.github.io/rel-noopener/
  */
 export function windowOpenNoOpener(url: string): void {
-	if (platform.isNative || browser.isEdgeWebView) {
-		// In VSCode, window.open() always returns null...
-		// The same is true for a WebView (see https://github.com/Microsoft/monaco-editor/issues/628)
-		window.open(url);
-	} else {
-		let newTab = window.open();
-		if (newTab) {
-			(newTab as any).opener = null;
-			newTab.location.href = url;
-		}
-	}
+	window.open(url, undefined, 'noopener');
 }
 
 export function animate(fn: () => void): IDisposable {

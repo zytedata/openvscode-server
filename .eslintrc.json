@@ -550,7 +550,7 @@
                     "**/vs/workbench/api/{common,browser}/**",
                     "**/vs/workbench/services/**/{common,browser}/**",
                     "vscode-textmate",
-                    "vscode-oniguruma"
+					"vscode-oniguruma"
                 ]
             },
             {
@@ -748,7 +748,8 @@
                     "**/vs/base/parts/**/{common,browser}/**",
                     "**/vs/platform/**/{common,browser}/**",
                     "**/vs/code/**/{common,browser}/**",
-                    "**/vs/workbench/workbench.web.api"
+                    "**/vs/workbench/workbench.web.api",
+					"@gitpod/gitpod-protocol/lib/**"
                 ]
             },
             {
