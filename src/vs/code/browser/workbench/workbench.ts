@@ -301,6 +301,9 @@ async function doStart(): Promise<void> {
 		title: localize('home', "Home")
 	};
 
+	const gitpodHostURL = new URL(info.gitpodHost);
+	const gitpodDomain = gitpodHostURL.protocol + '//*.' + gitpodHostURL.host;
+
 	await create(document.body, {
 		remoteAuthority,
 		webviewEndpoint: webviewEndpoint.toString(),
@@ -330,7 +333,13 @@ async function doStart(): Promise<void> {
 		initialColorTheme: {
 			themeType: 'dark'
 		},
-		credentialsProvider: new LocalStorageCredentialsProvider()
+		credentialsProvider: new LocalStorageCredentialsProvider(),
+		productConfiguration: {
+			linkProtectionTrustedDomains: [
+				...(product.linkProtectionTrustedDomains || []),
+				gitpodDomain
+			]
+		}
 	});
 }
 
