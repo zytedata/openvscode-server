@@ -231,7 +231,7 @@ async function doStart(): Promise<IDisposable> {
 	const infoResponse = await fetch(window.location.protocol + '//' + supervisorHost + '/_supervisor/v1/info/workspace', {
 		credentials: 'include'
 	});
-	if (_state === 'terminated') {
+	if (_state === 'terminated') {
 		return Disposable.None;
 	}
 
@@ -245,14 +245,14 @@ async function doStart(): Promise<IDisposable> {
 
 	const remotePort = location.protocol === 'https:' ? '443' : '80';
 	const remoteAuthority = window.location.host + ':' + remotePort;
-	const remoteUserDataElement = document.getElementById('vscode-remote-user-data-uri');
-	if (remoteUserDataElement) {
-		remoteUserDataElement.setAttribute('data-settings', JSON.stringify({
-			scheme: 'vscode-remote',
-			authority: remoteAuthority,
-			path: join(info.userHome, product.dataFolderName)
-		}));
-	}
+	const remoteUserDataElement = document.createElement('meta');
+	remoteUserDataElement.id = 'vscode-remote-user-data-uri';
+	remoteUserDataElement.setAttribute('data-settings', JSON.stringify({
+		scheme: 'vscode-remote',
+		authority: remoteAuthority,
+		path: join(info.userHome, product.dataFolderName)
+	}));
+	document.head.appendChild(remoteUserDataElement);
 
 	const webviewEndpoint = new URL(document.baseURI);
 	webviewEndpoint.host = 'webview-' + webviewEndpoint.host;

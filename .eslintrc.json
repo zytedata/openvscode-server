@@ -437,7 +437,8 @@
                     "**/vs/workbench/workbench.web.api",
                     "**/vs/workbench/{common,browser}/**",
                     "**/vs/workbench/services/*/{common,browser}/**",
-                    "assert"
+                    "assert",
+                    "**/vs/gitpod/{common,browser}/**"
                 ]
             },
             {

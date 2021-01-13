@@ -46,21 +46,17 @@ import { getWorkspaceIdentifier } from 'vs/workbench/services/workspaces/browser
 import { coalesce } from 'vs/base/common/arrays';
 import { InMemoryFileSystemProvider } from 'vs/platform/files/common/inMemoryFilesystemProvider';
 import { ICommandService } from 'vs/platform/commands/common/commands';
-import { IIndexedDBFileSystemProvider, IndexedDB, INDEXEDDB_LOGS_OBJECT_STORE, INDEXEDDB_USERDATA_OBJECT_STORE } from 'vs/platform/files/browser/indexedDBFileSystemProvider';
+import { IndexedDB, INDEXEDDB_LOGS_OBJECT_STORE } from 'vs/platform/files/browser/indexedDBFileSystemProvider';
 import { BrowserRequestService } from 'vs/workbench/services/request/browser/requestService';
 import { IRequestService } from 'vs/platform/request/common/request';
 import { IUserDataInitializationService, UserDataInitializationService } from 'vs/workbench/services/userData/browser/userDataInit';
 import { UserDataSyncStoreManagementService } from 'vs/platform/userDataSync/common/userDataSyncStoreService';
 import { IUserDataSyncStoreManagementService } from 'vs/platform/userDataSync/common/userDataSync';
 import { ILifecycleService } from 'vs/workbench/services/lifecycle/common/lifecycle';
-import { Action2, MenuId, registerAction2 } from 'vs/platform/actions/common/actions';
-import { ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
-import { localize } from 'vs/nls';
-import { CATEGORIES } from 'vs/workbench/common/actions';
-import { IDialogService } from 'vs/platform/dialogs/common/dialogs';
-import { IHostService } from 'vs/workbench/services/host/browser/host';
 import { IUriIdentityService } from 'vs/workbench/services/uriIdentity/common/uriIdentity';
 import { UriIdentityService } from 'vs/workbench/services/uriIdentity/common/uriIdentityService';
+import { joinPath } from 'vs/base/common/resources';
+import { GitpodFileUserDataProvider } from 'vs/gitpod/browser/gitpodFileUserDataProvider';
 
 class BrowserMain extends Disposable {
 
@@ -282,43 +278,13 @@ class BrowserMain extends Disposable {
 			// Remote file system
 			const remoteFileSystemProvider = this._register(new RemoteFileSystemProvider(remoteAgentService));
 			fileService.registerProvider(Schemas.vscodeRemote, remoteFileSystemProvider);
-		}
 
-		// User data
-		let indexedDBUserDataProvider: IIndexedDBFileSystemProvider | null = null;
-		try {
-			indexedDBUserDataProvider = await indexedDB.createFileSystemProvider(Schemas.userData, INDEXEDDB_USERDATA_OBJECT_STORE);
-		} catch (error) {
-			console.error(error);
+			const remoteUserDataUri = this.getRemoteUserDataUri();
+			if (remoteUserDataUri) {
+				const userDataSystemProvider = this._register(new GitpodFileUserDataProvider(remoteUserDataUri, remoteFileSystemProvider, environmentService.userRoamingDataHome, logService));
+				fileService.registerProvider(Schemas.userData, userDataSystemProvider);
+			}
 		}
-
-		if (indexedDBUserDataProvider) {
-			registerAction2(class ResetUserDataAction extends Action2 {
-				constructor() {
-					super({
-						id: 'workbench.action.resetUserData',
-						title: { original: 'Reset User Data', value: localize('reset', "Reset User Data") },
-						category: CATEGORIES.Developer,
-						menu: {
-							id: MenuId.CommandPalette
-						}
-					});
-				}
-				async run(accessor: ServicesAccessor): Promise<void> {
-					const dialogService = accessor.get(IDialogService);
-					const hostService = accessor.get(IHostService);
-					const result = await dialogService.confirm({
-						message: localize('reset user data message', "Would you like to reset your data (settings, keybindings, extensions, snippets and UI State) and reload?")
-					});
-					if (result.confirmed) {
-						await indexedDBUserDataProvider!.reset();
-					}
-					hostService.reload();
-				}
-			});
-		}
-
-		fileService.registerProvider(Schemas.userData, indexedDBUserDataProvider || new InMemoryFileSystemProvider());
 	}
 
 	private async createStorageService(payload: IWorkspaceInitializationPayload, environmentService: IWorkbenchEnvironmentService, fileService: IFileService, logService: ILogService): Promise<BrowserStorageService> {
@@ -369,6 +335,18 @@ class BrowserMain extends Disposable {
 		}
 
 		return { id: 'empty-window' };
+	}
+
+	private getRemoteUserDataUri(): URI | undefined {
+		const element = document.getElementById('vscode-remote-user-data-uri');
+		if (element) {
+			const remoteUserDataPath = element.getAttribute('data-settings');
+			if (remoteUserDataPath) {
+				return joinPath(URI.revive(JSON.parse(remoteUserDataPath)), 'User');
+			}
+		}
+
+		return undefined;
 	}
 
 	private getCookieValue(name: string): string | undefined {

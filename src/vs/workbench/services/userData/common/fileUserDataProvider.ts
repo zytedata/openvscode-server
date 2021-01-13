@@ -24,7 +24,7 @@ export class FileUserDataProvider extends Disposable implements
 	private readonly _onDidChangeFile = this._register(new Emitter<readonly IFileChange[]>());
 	readonly onDidChangeFile: Event<readonly IFileChange[]> = this._onDidChangeFile.event;
 
-	private extUri: ExtUri;
+	protected extUri: ExtUri;
 
 	private readonly watchResources = TernarySearchTree.forUris<URI>(uri => this.extUri.ignorePathCasing(uri));
 
@@ -124,7 +124,7 @@ export class FileUserDataProvider extends Disposable implements
 		const userDataChanges: IFileChange[] = [];
 		for (const change of changes) {
 			const userDataResource = this.toUserDataResource(change.resource);
-			if (this.watchResources.findSubstr(userDataResource)) {
+			if (userDataResource && this.watchResources.findSubstr(userDataResource)) {
 				userDataChanges.push({
 					resource: userDataResource,
 					type: change.type
@@ -137,11 +137,11 @@ export class FileUserDataProvider extends Disposable implements
 		}
 	}
 
-	private toFileSystemResource(userDataResource: URI): URI {
+	protected toFileSystemResource(userDataResource: URI): URI {
 		return userDataResource.with({ scheme: this.fileSystemScheme });
 	}
 
-	private toUserDataResource(fileSystemResource: URI): URI {
+	protected toUserDataResource(fileSystemResource: URI): URI | undefined {
 		return fileSystemResource.with({ scheme: this.userDataScheme });
 	}
 
