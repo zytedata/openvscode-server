@@ -154,7 +154,7 @@ export class TerminalService implements ITerminalService {
 		const remoteTerms = await this._remoteTerminalService.listTerminals(true);
 		const workspace = this._workspaceContextService.getWorkspace();
 		const unattachedWorkspaceRemoteTerms = remoteTerms
-			.filter(term => term.workspaceId === workspace.id)
+			.filter(term => !term.workspaceId || term.workspaceId === workspace.id)
 			.filter(term => !this.isAttachedToTerminal(term));
 
 		/* __GDPR__
