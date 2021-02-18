@@ -491,16 +491,18 @@ export async function activate(context: vscode.ExtensionContext) {
 		scopes: string[];
 		accessToken: string;
 	}
-	const pendingGitpodSession: Promise<vscode.AuthenticationSession[]> = (async () => {
+	const sessions: vscode.AuthenticationSession[] = [];
+	const onDidChangeSessionsEmitter = new vscode.EventEmitter<vscode.AuthenticationProviderAuthenticationSessionsChangeEvent>();
+	(async () => {
 		const keytar: Keytar = require('keytar');
 		const value = await keytar.getPassword(`${vscode.env.uriScheme}-gitpod.login`, 'account');
 		if (!value) {
-			return [];
+			return;
 		}
 		await keytar.deletePassword(`${vscode.env.uriScheme}-gitpod.login`, 'account');
 		const sessionData: SessionData[] = JSON.parse(value);
 		if (!sessionData.length) {
-			return [];
+			return;
 		}
 		const session = sessionData[0];
 		const needsUserInfo = !session.account;
@@ -512,7 +514,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				accountName: user.name!
 			};
 		}
-		return [{
+		sessions.push({
 			id: session.id,
 			account: {
 				label: session.account
@@ -522,16 +524,16 @@ export async function activate(context: vscode.ExtensionContext) {
 			},
 			scopes: session.scopes,
 			accessToken: session.accessToken
-		}];
+		});
+		onDidChangeSessionsEmitter.fire({ added: [session.id], removed: [], changed: [] });
 	})();
-	const onDidChangeSessionsEmitter = new vscode.EventEmitter<vscode.AuthenticationProviderAuthenticationSessionsChangeEvent>();
 	context.subscriptions.push(onDidChangeSessionsEmitter);
 	context.subscriptions.push(vscode.authentication.registerAuthenticationProvider({
 		id: 'gitpod',
 		label: 'Gitpod',
 		supportsMultipleAccounts: false,
 		onDidChangeSessions: onDidChangeSessionsEmitter.event,
-		getSessions: async () => await pendingGitpodSession,
+		getSessions: () => Promise.resolve(sessions),
 		login: async () => {
 			throw new Error('not supported');
 		},
