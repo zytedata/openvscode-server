@@ -234,6 +234,16 @@ interface ISettingsSyncOptions {
 	 * Handler is being called when the user changes Settings Sync enablement.
 	 */
 	enablementHandler?(enablement: boolean): void;
+
+	/**
+	 * A provider for the current machine info.
+	 */
+	readonly currentMachineProvider?: ICurrentMachineProvider;
+}
+
+interface ICurrentMachineProvider {
+	readonly id?: string
+	readonly name?: string
 }
 
 interface IWorkbenchConstructionOptions {
@@ -594,6 +604,7 @@ export {
 
 	// SettingsSync
 	ISettingsSyncOptions,
+	ICurrentMachineProvider,
 
 	// Updates/Quality
 	IUpdateProvider,

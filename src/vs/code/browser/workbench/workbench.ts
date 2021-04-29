@@ -12,6 +12,7 @@ import { Disposable, DisposableStore, IDisposable } from 'vs/base/common/lifecyc
 import { Schemas } from 'vs/base/common/network';
 import { isEqual } from 'vs/base/common/resources';
 import { URI } from 'vs/base/common/uri';
+import { generateUuid } from 'vs/base/common/uuid';
 import { localize } from 'vs/nls';
 import { parseLogLevel } from 'vs/platform/log/common/log';
 import product from 'vs/platform/product/common/product';
@@ -480,6 +481,14 @@ async function doStart(): Promise<IDisposable> {
 			enabled: true,
 			enablementHandler: enablement => {
 				// TODO
+			},
+			currentMachineProvider: {
+				get id(): string {
+					return info.workspaceId + ':' + generateUuid();
+				},
+				get name(): string {
+					return info.workspaceId + '(Gitpod)';
+				}
 			}
 		},
 		webWorkerExtensionHostIframeSrc: webWorkerExtensionHostEndpoint.toString()
