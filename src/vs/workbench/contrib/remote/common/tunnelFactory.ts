@@ -8,7 +8,6 @@ import { Disposable } from 'vs/base/common/lifecycle';
 import { IWorkbenchContribution } from 'vs/workbench/common/contributions';
 import { IWorkbenchEnvironmentService } from 'vs/workbench/services/environment/common/environmentService';
 import { IOpenerService } from 'vs/platform/opener/common/opener';
-import { URI } from 'vs/base/common/uri';
 import { IRemoteExplorerService } from 'vs/workbench/services/remote/common/remoteExplorerService';
 import { ILogService } from 'vs/platform/log/common/log';
 
@@ -52,9 +51,7 @@ export class TunnelFactoryContribution extends Disposable implements IWorkbenchC
 						const remoteTunnel: RemoteTunnel = {
 							tunnelRemotePort: tunnel.remoteAddress.port,
 							tunnelRemoteHost: tunnel.remoteAddress.host,
-							// The tunnel factory may give us an inaccessible local address.
-							// To make sure this doesn't happen, resolve the uri immediately.
-							localAddress: (await openerService.resolveExternalUri(URI.parse(localAddress))).resolved.toString(),
+							localAddress,
 							public: !!tunnel.public,
 							dispose: async () => { await tunnel.dispose(); }
 						};
