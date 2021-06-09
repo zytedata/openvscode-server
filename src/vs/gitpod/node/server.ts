@@ -25,15 +25,14 @@ import { Emitter, Event } from 'vs/base/common/event';
 import { IDisposable } from 'vs/base/common/lifecycle';
 import { FileAccess, Schemas } from 'vs/base/common/network';
 import { join } from 'vs/base/common/path';
-import * as platform from 'vs/base/common/platform';
-import Severity from 'vs/base/common/severity';
 import { ReadableStreamEventPayload } from 'vs/base/common/stream';
 import { URI } from 'vs/base/common/uri';
-import { IRawURITransformer, transformIncomingURIs, transformOutgoingURIs, URITransformer } from 'vs/base/common/uriIpc';
+import { IRawURITransformer, transformIncomingURIs, URITransformer } from 'vs/base/common/uriIpc';
 import { generateUuid } from 'vs/base/common/uuid';
 import { ClientConnectionEvent, IPCServer, IServerChannel } from 'vs/base/parts/ipc/common/ipc';
 import { PersistentProtocol, ProtocolConstants } from 'vs/base/parts/ipc/common/ipc.net';
 import { NodeSocket, WebSocketNodeSocket } from 'vs/base/parts/ipc/node/ipc.net';
+import { RemoteExtensionsEnvironment } from 'vs/gitpod/node/remoteExtensionsEnvironment';
 import { RemoteTerminalChannelServer } from 'vs/gitpod/node/remoteTerminalChannelServer';
 import { infoServiceClient, statusServiceClient, supervisorDeadlines, supervisorMetadata } from 'vs/gitpod/node/supervisor-client';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
@@ -49,13 +48,14 @@ import { IExtensionGalleryService, IExtensionManagementCLIService, IExtensionMan
 import { ExtensionManagementCLIService } from 'vs/platform/extensionManagement/common/extensionManagementCLIService';
 import { ExtensionManagementChannel } from 'vs/platform/extensionManagement/common/extensionManagementIpc';
 import { ExtensionManagementService } from 'vs/platform/extensionManagement/node/extensionManagementService';
-import { ExtensionIdentifier, IExtensionDescription } from 'vs/platform/extensions/common/extensions';
 import { IFileService } from 'vs/platform/files/common/files';
 import { FileService } from 'vs/platform/files/common/fileService';
 import { DiskFileSystemProvider } from 'vs/platform/files/node/diskFileSystemProvider';
 import { SyncDescriptor } from 'vs/platform/instantiation/common/descriptors';
 import { InstantiationService } from 'vs/platform/instantiation/common/instantiationService';
 import { ServiceCollection } from 'vs/platform/instantiation/common/serviceCollection';
+import { ILocalizationsService } from 'vs/platform/localizations/common/localizations';
+import { LocalizationsService } from 'vs/platform/localizations/node/localizations';
 import { BufferLogService } from 'vs/platform/log/common/bufferLog';
 import { ConsoleMainLogger, getLogLevel, ILogService, MultiplexLogService } from 'vs/platform/log/common/log';
 import { LogLevelChannel } from 'vs/platform/log/common/logIpc';
@@ -71,9 +71,6 @@ import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { NullTelemetryService } from 'vs/platform/telemetry/common/telemetryUtils';
 import { IFileChangeDto } from 'vs/workbench/api/common/extHost.protocol';
 import { IExtHostReadyMessage, IExtHostSocketMessage } from 'vs/workbench/services/extensions/common/extensionHostProtocol';
-import { Logger } from 'vs/workbench/services/extensions/common/extensionPoints';
-import { ExtensionScanner, ExtensionScannerInput, IExtensionReference } from 'vs/workbench/services/extensions/node/extensionPoints';
-import { IGetEnvironmentDataArguments, IRemoteAgentEnvironmentDTO, IScanExtensionsArguments, IScanSingleExtensionArguments } from 'vs/workbench/services/remote/common/remoteAgentEnvironmentChannel';
 import { REMOTE_FILE_SYSTEM_CHANNEL_NAME } from 'vs/workbench/services/remote/common/remoteAgentFileSystemChannel';
 import { RemoteExtensionLogFileName } from 'vs/workbench/services/remote/common/remoteAgentService';
 
@@ -347,107 +344,6 @@ async function main(): Promise<void> {
 	const diskFileSystemProvider = new DiskFileSystemProvider(logService);
 	fileService.registerProvider(Schemas.file, diskFileSystemProvider);
 
-	const rootPath = FileAccess.asFileUri('', require).fsPath;
-	const systemExtensionRoot = path.normalize(path.join(rootPath, '..', 'extensions'));
-	const extraDevSystemExtensionsRoot = path.normalize(path.join(rootPath, '..', '.build', 'builtInExtensions'));
-	const logger = new Logger((severity, source, message) => {
-		const msg = devMode && source ? `[${source}]: ${message}` : message;
-		if (severity === Severity.Error) {
-			logService.error(msg);
-		} else if (severity === Severity.Warning) {
-			logService.warn(msg);
-		} else {
-			logService.info(msg);
-		}
-	});
-	// see used APIs in vs/workbench/services/remote/common/remoteAgentEnvironmentChannel.ts
-	class RemoteExtensionsEnvironment implements IServerChannel<RemoteAgentConnectionContext> {
-		protected extensionHostLogFileSeq = 1;
-		async call(ctx: RemoteAgentConnectionContext, command: string, arg?: any, cancellationToken?: CancellationToken | undefined): Promise<any> {
-			if (command === 'getEnvironmentData') {
-				const args: IGetEnvironmentDataArguments = arg;
-				const uriTranformer = new URITransformer(rawURITransformerFactory(args.remoteAuthority));
-				return transformOutgoingURIs({
-					pid: process.pid,
-					connectionToken,
-					appRoot: URI.file(environmentService.appRoot),
-					settingsPath: environmentService.machineSettingsResource,
-					logsPath: URI.file(environmentService.logsPath),
-					extensionsPath: URI.file(environmentService.extensionsPath),
-					extensionHostLogsPath: URI.file(path.join(environmentService.logsPath, `extension_host_${this.extensionHostLogFileSeq++}`)),
-					globalStorageHome: environmentService.globalStorageHome,
-					workspaceStorageHome: environmentService.workspaceStorageHome,
-					userHome: environmentService.userHome,
-					os: platform.OS,
-					marks: [],
-					useHostProxy: false
-				} as IRemoteAgentEnvironmentDTO, uriTranformer);
-			}
-			if (command === 'scanSingleExtension') {
-				let args: IScanSingleExtensionArguments = arg;
-				const uriTranformer = new URITransformer(rawURITransformerFactory(args.remoteAuthority));
-				args = transformIncomingURIs(args, uriTranformer);
-				// see scanSingleExtension in src/vs/workbench/services/extensions/electron-browser/cachedExtensionScanner.ts
-				// TODO: read built nls file
-				const translations = {};
-				const input = new ExtensionScannerInput(product.version, product.commit, args.language, devMode, URI.revive(args.extensionLocation).fsPath, args.isBuiltin, false, translations);
-				const extension = await ExtensionScanner.scanSingleExtension(input, logService);
-				if (!extension) {
-					return undefined;
-				}
-				return transformOutgoingURIs(extension, uriTranformer);
-			}
-			if (command === 'scanExtensions') {
-				let args: IScanExtensionsArguments = arg;
-				const uriTranformer = new URITransformer(rawURITransformerFactory(args.remoteAuthority));
-				args = transformIncomingURIs(args, uriTranformer);
-				// see _scanInstalledExtensions in src/vs/workbench/services/extensions/electron-browser/cachedExtensionScanner.ts
-				// TODO: read built nls file
-				const translations = {};
-				let pendingSystem = ExtensionScanner.scanExtensions(new ExtensionScannerInput(product.version, product.commit, args.language, devMode, systemExtensionRoot, true, false, translations), logger);
-				const builtInExtensions = product.builtInExtensions;
-				if (devMode && builtInExtensions && builtInExtensions.length) {
-					pendingSystem = ExtensionScanner.mergeBuiltinExtensions(pendingSystem, ExtensionScanner.scanExtensions(new ExtensionScannerInput(product.version, product.commit, args.language, devMode, extraDevSystemExtensionsRoot, true, false, translations), logger, {
-						resolveExtensions: () => {
-							const result: IExtensionReference[] = [];
-							for (const extension of builtInExtensions) {
-								result.push({ name: extension.name, path: path.join(extraDevSystemExtensionsRoot, extension.name) });
-							}
-							return Promise.resolve(result);
-						}
-					}));
-				}
-				const pendingUser = extensionsInstalled.then(() => ExtensionScanner.scanExtensions(new ExtensionScannerInput(product.version, product.commit, args.language, devMode, environmentService.extensionsPath, false, false, translations), logger));
-				let pendingDev: Promise<IExtensionDescription[]>[] = [];
-				if (args.extensionDevelopmentPath) {
-					pendingDev = args.extensionDevelopmentPath.map(devPath => ExtensionScanner.scanOneOrMultipleExtensions(new ExtensionScannerInput(product.version, product.commit, args.language, devMode, URI.revive(devPath).fsPath, false, true, translations), logger));
-				}
-				const result: IExtensionDescription[] = [];
-				const skipExtensions = new Set<string>(args.skipExtensions.map(ExtensionIdentifier.toKey));
-				skipExtensions.add('vscode.github-authentication');
-				for (const extensions of await Promise.all([...pendingDev, pendingUser, pendingSystem])) {
-					for (let i = extensions.length - 1; i >= 0; i--) {
-						const extension = extensions[i];
-						const key = ExtensionIdentifier.toKey(extension.identifier);
-						if (skipExtensions.has(key)) {
-							continue;
-						}
-						skipExtensions.add(key);
-						result.unshift(transformOutgoingURIs(extension, uriTranformer));
-					}
-				}
-				return result;
-			}
-			logService.error('Unknown command: RemoteExtensionsEnvironment.' + command);
-			throw new Error('Unknown command: RemoteExtensionsEnvironment.' + command);
-		}
-		listen(ctx: RemoteAgentConnectionContext, event: string, arg?: any): Event<any> {
-			logService.error('Unknown event: RemoteExtensionsEnvironment.' + event);
-			throw new Error('Unknown event: RemoteExtensionsEnvironment.' + event);
-		}
-	}
-	channelServer.registerChannel('remoteextensionsenvironment', new RemoteExtensionsEnvironment());
-
 	const synchingTasks = (async () => {
 		const tasks = new Map<string, TaskStatus>();
 		logService.info('code server: synching tasks...');
@@ -658,24 +554,33 @@ async function main(): Promise<void> {
 
 	services.set(IRequestService, new SyncDescriptor(RequestService));
 
-	let resolveExtensionsInstalled: (value?: unknown) => void;
-	const extensionsInstalled = new Promise(resolve => resolveExtensionsInstalled = resolve);
+	services.set(ILocalizationsService, new SyncDescriptor(LocalizationsService));
 
 	// Startup
 	const instantiationService = new InstantiationService(services);
 	instantiationService.invokeFunction(accessor => {
 		const extensionManagementService = accessor.get(IExtensionManagementService);
 		channelServer.registerChannel('extensions', new ExtensionManagementChannel(extensionManagementService, requestContext => new URITransformer(rawURITransformerFactory(requestContext))));
-		installInitialExtensions(
+		const pendingInitialExtensions = installInitialExtensions(
 			accessor.get(IExtensionManagementCLIService),
 			accessor.get(IRequestService),
 			accessor.get(IFileService),
 			logService
-		).then(resolveExtensionsInstalled);
+		);
 		(extensionManagementService as ExtensionManagementService).removeDeprecatedExtensions();
 
 		const requestService = accessor.get(IRequestService);
 		channelServer.registerChannel('request', new RequestChannel(requestService));
+
+		channelServer.registerChannel('remoteextensionsenvironment', new RemoteExtensionsEnvironment(
+			devMode,
+			connectionToken,
+			environmentService,
+			accessor.get(ILocalizationsService) as LocalizationsService,
+			rawURITransformerFactory,
+			logService,
+			pendingInitialExtensions,
+		));
 
 		// Delay creation of spdlog for perf reasons (https://github.com/microsoft/vscode/issues/72906)
 		bufferLogService.logger = new SpdLogLogger('main', join(environmentService.logsPath, `${RemoteExtensionLogFileName}.log`), true, bufferLogService.getLevel());
