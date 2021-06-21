@@ -15,9 +15,9 @@ import { WorkspaceInfoRequest } from '@gitpod/supervisor-api-grpc/lib/info_pb';
 import { NotificationServiceClient } from '@gitpod/supervisor-api-grpc/lib/notification_grpc_pb';
 import { NotifyRequest, NotifyResponse, RespondRequest, SubscribeRequest, SubscribeResponse } from '@gitpod/supervisor-api-grpc/lib/notification_pb';
 import { PortServiceClient } from '@gitpod/supervisor-api-grpc/lib/port_grpc_pb';
-import { CloseTunnelRequest, TunnelPortRequest, TunnelVisiblity } from '@gitpod/supervisor-api-grpc/lib/port_pb';
+import { CloseTunnelRequest, RetryAutoExposeRequest, TunnelPortRequest, TunnelVisiblity } from '@gitpod/supervisor-api-grpc/lib/port_pb';
 import { StatusServiceClient } from '@gitpod/supervisor-api-grpc/lib/status_grpc_pb';
-import { ExposedPortInfo, OnPortExposedAction, PortsStatus, PortsStatusRequest, PortsStatusResponse, PortVisibility } from '@gitpod/supervisor-api-grpc/lib/status_pb';
+import { ExposedPortInfo, OnPortExposedAction, PortAutoExposure, PortsStatus, PortsStatusRequest, PortsStatusResponse, PortVisibility } from '@gitpod/supervisor-api-grpc/lib/status_pb';
 import { TokenServiceClient } from '@gitpod/supervisor-api-grpc/lib/token_grpc_pb';
 import { GetTokenRequest } from '@gitpod/supervisor-api-grpc/lib/token_pb';
 import * as grpc from '@grpc/grpc-js';
@@ -392,8 +392,13 @@ export async function activate(context: vscode.ExtensionContext) {
 						port.description = 'not served';
 						port.iconPath = new vscode.ThemeIcon('circle-slash');
 					} else if (!exposed && !port.tunnel) {
-						port.description = 'detecting...';
-						port.iconPath = new vscode.ThemeIcon('circle-outline');
+						if (portStatus.getAutoExposure() === PortAutoExposure.FAILED) {
+							port.description = 'failed to expose';
+							port.iconPath = new vscode.ThemeIcon('warning', new vscode.ThemeColor('list.warningForeground'));
+						} else {
+							port.description = 'detecting...';
+							port.iconPath = new vscode.ThemeIcon('circle-outline');
+						}
 					} else {
 						port.description = 'open';
 						if (port.tunnel) {
@@ -424,6 +429,9 @@ export async function activate(context: vscode.ExtensionContext) {
 						} else {
 							port.contextValue = 'host-' + port.contextValue;
 						}
+					}
+					if (!exposed && !port.tunnel && portStatus.getAutoExposure() === PortAutoExposure.FAILED) {
+						port.contextValue = 'failed-' + port.contextValue;
 					}
 					if (isExposedServedGitpodWorkspacePort(port) && !isExposedServedPort(currentStatus)) {
 						this.onDidExposeServedPortEmitter.fire(port);
@@ -536,6 +544,13 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('gitpod.ports.openBrowser', (port: GitpodWorkspacePort) =>
 		port.openExternal()
 	));
+	context.subscriptions.push(vscode.commands.registerCommand('gitpod.ports.retryAutoExpose', async (port: GitpodWorkspacePort) => {
+		const request = new RetryAutoExposeRequest();
+		request.setPort(port.portNumber);
+		await util.promisify(portServiceClient.retryAutoExpose.bind(portServiceClient, request, supervisorMetadata, {
+			deadline: Date.now() + supervisorDeadlines.normal
+		}))();
+	}));
 
 	const portsStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
 	context.subscriptions.push(portsStatusBarItem);
