@@ -24,8 +24,8 @@ import { Promises } from 'vs/base/node/pfs';
 // appears to be a race condition around writing to the FD which may be based on how powerful the
 // hardware is. The workaround for this is to space out when large amounts of data is being written
 // to the terminal. See https://github.com/microsoft/vscode/issues/38137
-const WRITE_MAX_CHUNK_SIZE = 50;
-const WRITE_INTERVAL_MS = 5;
+export const WRITE_MAX_CHUNK_SIZE = 50;
+export const WRITE_INTERVAL_MS = 5;
 
 const enum ShutdownConstants {
 	/**

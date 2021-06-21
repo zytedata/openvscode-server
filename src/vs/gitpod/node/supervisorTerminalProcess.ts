@@ -14,6 +14,7 @@ import { ITerminalChildProcess, ITerminalLaunchError, TerminalIcon, TerminalShel
 import { TerminalDataBufferer } from 'vs/platform/terminal/common/terminalDataBuffering';
 import { IPtyHostProcessReplayEvent } from 'vs/platform/terminal/common/terminalProcess';
 import { TerminalRecorder } from 'vs/platform/terminal/common/terminalRecorder';
+import { WRITE_INTERVAL_MS, WRITE_MAX_CHUNK_SIZE } from 'vs/platform/terminal/node/terminalProcess';
 
 export interface OpenSupervisorTerminalProcessOptions {
 	shell: string
@@ -22,6 +23,12 @@ export interface OpenSupervisorTerminalProcessOptions {
 	cols: number
 	rows: number
 }
+
+interface IWriteObject {
+	data: string,
+	encoding: BufferEncoding
+}
+
 
 /**
  * See src/vs/workbench/contrib/terminal/node/terminalProcess.ts for a reference implementation
@@ -60,6 +67,9 @@ export class SupervisorTerminalProcess extends DisposableStore implements ITermi
 
 	private readonly _bufferer: TerminalDataBufferer;
 
+	private _writeQueue: IWriteObject[] = [];
+	private _writeTimeout: NodeJS.Timeout | undefined;
+
 	constructor(
 		readonly id: number,
 		private initialCwd: string,
@@ -77,6 +87,16 @@ export class SupervisorTerminalProcess extends DisposableStore implements ITermi
 
 		// Data recording for reconnect
 		this.add(this._onProcessData.event(e => this._recorder.recordData(e)));
+
+		this.add({
+			dispose: () => {
+				this._writeQueue.length = 0;
+				if (this._writeTimeout) {
+					clearTimeout(this._writeTimeout);
+					this._writeTimeout = undefined;
+				}
+			}
+		});
 	}
 
 	acknowledgeDataEvent(charCount: number): void {
@@ -267,35 +287,69 @@ export class SupervisorTerminalProcess extends DisposableStore implements ITermi
 	}
 
 	async processBinary(data: string): Promise<void> {
-		return this.doInput(data, 'binary');
+		this.doInput(data, 'binary');
 	}
 
-	protected doInput(data: string, encoding: BufferEncoding): Promise<void> {
-		if (this['_isDisposed'] || !this.alias) {
-			return Promise.reject();
+	protected doInput(data: string, encoding: BufferEncoding): void {
+		if (this['_isDisposed']) {
+			return;
 		}
-		const request = new WriteTerminalRequest();
-		request.setAlias(this.alias);
-		request.setStdin(Buffer.from(data, encoding));
-		let resolve: () => void;
-		let reject: (reason: any) => void;
-		const result = new Promise<void>((res, rej) => {
-			reject = rej;
-			resolve = res;
-		});
-		terminalServiceClient.write(request, supervisorMetadata, { deadline: Date.now() + supervisorDeadlines.short }, (e, resp) => {
-			if (e && e.code !== status.NOT_FOUND) {
-				this.logService.error(`code server: ${this.id}:${this.alias} terminal: write failed:`, e);
-				reject(e);
-			} else {
-				resolve();
+		for (let i = 0; i <= Math.floor(data.length / WRITE_MAX_CHUNK_SIZE); i++) {
+			const obj = {
+				encoding,
+				data: data.substr(i * WRITE_MAX_CHUNK_SIZE, WRITE_MAX_CHUNK_SIZE)
+			};
+			this._writeQueue.push(obj);
+		}
+		this._startWrite();
+	}
+
+	private _startWrite(): void {
+		// Don't write if it's already queued of is there is nothing to write
+		if (this._writeTimeout !== undefined || this._writeQueue.length === 0) {
+			return;
+		}
+
+		this._doWrite();
+
+		// Don't queue more writes if the queue is empty
+		if (this._writeQueue.length === 0) {
+			this._writeTimeout = undefined;
+			return;
+		}
+
+		// Queue the next write
+		this._writeTimeout = setTimeout(() => {
+			this._writeTimeout = undefined;
+			this._startWrite();
+		}, WRITE_INTERVAL_MS);
+	}
+
+	private pendingWrite = Promise.resolve();
+	private _doWrite(): void {
+		const { data, encoding } = this._writeQueue.shift()!;
+		this.pendingWrite = this.pendingWrite.then(async () => {
+			if (this['_isDisposed'] || !this.alias) {
+				return;
+			}
+			try {
+				const request = new WriteTerminalRequest();
+				request.setAlias(this.alias);
+				request.setStdin(Buffer.from(data, encoding));
+				await util.promisify(terminalServiceClient.write.bind(terminalServiceClient, request, supervisorMetadata, {
+					deadline: Date.now() + supervisorDeadlines.short
+				}))();
+			} catch (e) {
+				if (e && e.code !== status.NOT_FOUND) {
+					this.logService.error(`code server: ${this.id}:${this.alias} terminal: write failed:`, e);
+				}
 			}
 		});
-		return result;
 	}
 
+	private pendinResize = Promise.resolve();
 	resize(cols: number, rows: number): void {
-		if (this['_isDisposed'] || !this.alias) {
+		if (this['_isDisposed']) {
 			return;
 		}
 		const size = this.toSize(cols, rows);
@@ -306,13 +360,22 @@ export class SupervisorTerminalProcess extends DisposableStore implements ITermi
 		// Buffered events should flush when a resize occurs
 		this._bufferer.flushBuffer(this.id);
 
-		const request = new SetTerminalSizeRequest();
-		request.setAlias(this.alias);
-		request.setSize(size);
-		request.setForce(true);
-		terminalServiceClient.setSize(request, supervisorMetadata, { deadline: Date.now() + supervisorDeadlines.short }, e => {
-			if (e && e.code !== status.NOT_FOUND) {
-				this.logService.error(`code server: ${this.id}:${this.alias} terminal: resize failed:`, e);
+		this.pendinResize = this.pendinResize.then(async () => {
+			if (this['_isDisposed'] || !this.alias) {
+				return;
+			}
+			try {
+				const request = new SetTerminalSizeRequest();
+				request.setAlias(this.alias);
+				request.setSize(size);
+				request.setForce(true);
+				await util.promisify(terminalServiceClient.setSize.bind(terminalServiceClient, request, supervisorMetadata, {
+					deadline: Date.now() + supervisorDeadlines.short
+				}))();
+			} catch (e) {
+				if (e && e.code !== status.NOT_FOUND) {
+					this.logService.error(`code server: ${this.id}:${this.alias} terminal: resize failed:`, e);
+				}
 			}
 		});
 	}
