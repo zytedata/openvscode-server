@@ -659,12 +659,19 @@ async function doStart(): Promise<IDisposable> {
 			if (!localhost) {
 				return uri;
 			}
+			let externalEndpoint: URI;
 			const tunnel = tunnels.get(localhost.port);
 			if (tunnel) {
-				return URI.parse('http://localhost:' + tunnel.status.localPort);
+				externalEndpoint = URI.parse('http://localhost:' + tunnel.status.localPort);
+			} else {
+				const publicUrl = (await commands.executeCommand('gitpod.resolveExternalPort', localhost.port)) as any as string;
+				externalEndpoint = URI.parse(publicUrl);
 			}
-			const publicUrl = (await commands.executeCommand('gitpod.resolveExternalPort', localhost.port)) as any as string;
-			return URI.parse(publicUrl);
+			return externalEndpoint.with({
+				path: uri.path,
+				query: uri.query,
+				fragment: uri.fragment
+			});
 		},
 		homeIndicator,
 		windowIndicator: {
