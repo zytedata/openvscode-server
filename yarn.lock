@@ -207,10 +207,10 @@
     "@improbable-eng/grpc-web" "0.14.0"
     google-protobuf "^3.17.0"
 
-"@gitpod/supervisor-api-grpc@ak-vscode-update":
-  version "0.1.5-ak-vscode-update.2"
-  resolved "https://registry.yarnpkg.com/@gitpod/supervisor-api-grpc/-/supervisor-api-grpc-0.1.5-ak-vscode-update.2.tgz#461669b9d886268bd3efbed346bdb93d1f413289"
-  integrity sha512-QiZmNCnn32Gc4c9YJeDwJQ9Qz4JkkKQUwG5XZWYwwCNPqbdo/Of3H/Gn+DVFFbaHsIb9Kd547ItyyORccx+pcQ==
+"@gitpod/supervisor-api-grpc@akosyakov-ports-notify-a-user-about-3160":
+  version "0.1.5-akosyakov-ports-notify-a-user-about-3160.1"
+  resolved "https://registry.yarnpkg.com/@gitpod/supervisor-api-grpc/-/supervisor-api-grpc-0.1.5-akosyakov-ports-notify-a-user-about-3160.1.tgz#fad6d52a0109fba779f1ffbf3d2c82f534d7b322"
+  integrity sha512-dJOhTu4XDQfmiluX54x4KfuUV/vYgR89QmymL0PewcnyzVanPTUBV5bOhByt+LI1QK9ySUWDVk4hVplHF0MvXQ==
   dependencies:
     "@grpc/grpc-js" "^1.1.5"
     google-protobuf "^3.15.8"

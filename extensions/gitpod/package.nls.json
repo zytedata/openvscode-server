@@ -21,5 +21,6 @@
 	"tunnelHost": "Tunnel on localhost",
 	"addToConfig": "Add to .gitpod.yml",
 	"connectLocalApp": "Developer: Connect to Local Gitpod App",
-	"enableForwardedPortsView": "Developer: Enable Tunneled Ports View"
+	"enableForwardedPortsView": "Developer: Enable Tunneled Ports View",
+	"retryAutoExpose": "Retry to expose"
 }

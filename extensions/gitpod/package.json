@@ -77,6 +77,11 @@
         "icon": "$(globe)"
       },
       {
+        "command": "gitpod.ports.retryAutoExpose",
+        "title": "%retryAutoExpose%",
+        "icon": "$(refresh)"
+      },
+      {
         "command": "gitpod.ports.preview",
         "title": "%openPreview%",
         "icon": "$(open-preview)"
@@ -251,6 +256,11 @@
           "command": "gitpod.ports.openBrowser",
           "when": "view == gitpod.workspace && viewItem =~ /exposed/ || viewItem =~ /tunneled/",
           "group": "inline@4"
+        },
+        {
+          "command": "gitpod.ports.retryAutoExpose",
+          "when": "view == gitpod.workspace && viewItem =~ /failed/",
+          "group": "inline@5"
         }
       ],
       "commandPalette": [
@@ -260,6 +270,10 @@
         },
         {
           "command": "gitpod.ports.openBrowser",
+          "when": "false"
+        },
+        {
+          "command": "gitpod.ports.retryAutoExpose",
           "when": "false"
         },
         {
@@ -317,7 +331,7 @@
   },
   "dependencies": {
     "@gitpod/gitpod-protocol": "main",
-    "@gitpod/supervisor-api-grpc": "main",
+    "@gitpod/supervisor-api-grpc": "akosyakov-ports-notify-a-user-about-3160",
     "bufferutil": "^4.0.1",
     "node-fetch": "^2.6.1",
     "reconnecting-websocket": "^4.4.0",
