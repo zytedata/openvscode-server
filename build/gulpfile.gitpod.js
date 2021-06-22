@@ -103,7 +103,7 @@ const optimizeGitpodWebTask = task.define('optimize-gitpod-web', task.series(
 		bundleInfo: undefined,
 		header: [
 			'/*!--------------------------------------------------------',
-			' * Copyright (C) TypeFox. All rights reserved.',
+			' * Copyright (C) Gitpod. All rights reserved.',
 			' *--------------------------------------------------------*/'
 		].join('\n')
 	})
@@ -123,7 +123,7 @@ const optimizeGitpodServerTask = task.define('optimize-gitpod-server', task.seri
 		bundleInfo: undefined,
 		header: [
 			'/*!--------------------------------------------------------',
-			' * Copyright (C) TypeFox. All rights reserved.',
+			' * Copyright (C) Gitpod. All rights reserved.',
 			' *--------------------------------------------------------*/'
 		].join('\n')
 	})
@@ -147,7 +147,7 @@ const outGitpodServerMin = outGitpodServer + '-min';
 const minifyGitpodServerTask = task.define('minify-gitpod-server', task.series(
 	optimizeGitpodServerTask,
 	util.rimraf(outGitpodServerMin),
-	common.minifyTask(outGitpodServer)
+	common.minifyTask(outGitpodServer, '/out')
 ));
 gulp.task(minifyGitpodWebTask);
 
