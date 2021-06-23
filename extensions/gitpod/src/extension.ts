@@ -388,16 +388,17 @@ export async function activate(context: vscode.ExtensionContext) {
 					}
 
 					const exposed = portStatus.getExposed();
+					const accessible = exposed || port.tunnel;
 					if (!portStatus.getServed()) {
 						port.description = 'not served';
-						port.iconPath = new vscode.ThemeIcon('circle-slash');
-					} else if (!exposed && !port.tunnel) {
+						port.iconPath = new vscode.ThemeIcon('circle-outline');
+					} else if (!accessible) {
 						if (portStatus.getAutoExposure() === PortAutoExposure.FAILED) {
 							port.description = 'failed to expose';
-							port.iconPath = new vscode.ThemeIcon('warning', new vscode.ThemeColor('list.warningForeground'));
+							port.iconPath = new vscode.ThemeIcon('warning', new vscode.ThemeColor('editorWarning.foreground'));
 						} else {
 							port.description = 'detecting...';
-							port.iconPath = new vscode.ThemeIcon('circle-outline');
+							port.iconPath = new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('editorWarning.foreground'));
 						}
 					} else {
 						port.description = 'open';
@@ -430,7 +431,7 @@ export async function activate(context: vscode.ExtensionContext) {
 							port.contextValue = 'host-' + port.contextValue;
 						}
 					}
-					if (!exposed && !port.tunnel && portStatus.getAutoExposure() === PortAutoExposure.FAILED) {
+					if (!accessible && portStatus.getAutoExposure() === PortAutoExposure.FAILED) {
 						port.contextValue = 'failed-' + port.contextValue;
 					}
 					if (isExposedServedGitpodWorkspacePort(port) && !isExposedServedPort(currentStatus)) {
