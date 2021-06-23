@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@gitpod/supervisor-api-grpc@akosyakov-ports-notify-a-user-about-3160":
-  version "0.1.5-akosyakov-ports-notify-a-user-about-3160.1"
-  resolved "https://registry.yarnpkg.com/@gitpod/supervisor-api-grpc/-/supervisor-api-grpc-0.1.5-akosyakov-ports-notify-a-user-about-3160.1.tgz#fad6d52a0109fba779f1ffbf3d2c82f534d7b322"
-  integrity sha512-dJOhTu4XDQfmiluX54x4KfuUV/vYgR89QmymL0PewcnyzVanPTUBV5bOhByt+LI1QK9ySUWDVk4hVplHF0MvXQ==
+"@gitpod/supervisor-api-grpc@main":
+  version "0.1.5-main.1032"
+  resolved "https://registry.yarnpkg.com/@gitpod/supervisor-api-grpc/-/supervisor-api-grpc-0.1.5-main.1032.tgz#9ce2e2f08bebcf7b2ca908619eddfcfcc7f24a95"
+  integrity sha512-bA0KtIyCDpqNM6p1loBzmeEhIZmx5hxEggF5Vxjx3k9wDtOpPhGY6qgI0O9A+yojIcps+hkw+o2L4DoIAeLAdg==
   dependencies:
     "@grpc/grpc-js" "^1.1.5"
     google-protobuf "^3.15.8"
