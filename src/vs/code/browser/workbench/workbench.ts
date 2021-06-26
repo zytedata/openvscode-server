@@ -23,6 +23,13 @@ import { ColorScheme } from 'vs/platform/theme/common/theme';
 import { isFolderToOpen, isWorkspaceToOpen } from 'vs/platform/windows/common/windows';
 import { commands, create, ICommand, ICredentialsProvider, IHomeIndicator, ITunnel, ITunnelProvider, IWorkspace, IWorkspaceProvider } from 'vs/workbench/workbench.web.api';
 
+const loadingGrpc = import('@improbable-eng/grpc-web');
+const loadingLocalApp = (async () => {
+	// load grpc-web before local-app, see https://github.com/gitpod-io/gitpod/issues/4448
+	await loadingGrpc;
+	return import('@gitpod/local-app-api-grpcweb');
+})();
+
 interface ICredential {
 	service: string;
 	account: string;
@@ -404,9 +411,8 @@ async function doStart(): Promise<IDisposable> {
 		return Disposable.None;
 	}
 
-	// load grpc-web before local-app, see https://github.com/gitpod-io/gitpod/issues/4448
-	const { grpc } = await import('@improbable-eng/grpc-web');
-	const { LocalAppClient, TunnelStatusRequest, TunnelVisiblity } = await import('@gitpod/local-app-api-grpcweb');
+	const { grpc } = await loadingGrpc;
+	const { LocalAppClient, TunnelStatusRequest, TunnelVisiblity } = await loadingLocalApp;
 
 	//#region tunnels
 	class Tunnel implements ITunnel {
