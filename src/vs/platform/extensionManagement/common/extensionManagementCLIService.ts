@@ -201,14 +201,17 @@ export class ExtensionManagementCLIService implements IExtensionManagementCLISer
 		return null;
 	}
 
-	private async getGalleryExtensions(extensions: InstallExtensionInfo[]): Promise<Map<string, IGalleryExtension>> {
+	async getGalleryExtensions(extensions: InstallExtensionInfo[], token = CancellationToken.None): Promise<Map<string, IGalleryExtension>> {
 		const extensionIds = extensions.filter(({ version }) => version === undefined).map(({ id }) => id);
 		const extensionsWithIdAndVersion = extensions.filter(({ version }) => version !== undefined);
 
 		const galleryExtensions = new Map<string, IGalleryExtension>();
 		await Promise.all([
 			(async () => {
-				const result = await this.extensionGalleryService.getExtensions(extensionIds, CancellationToken.None);
+				if (!extensionIds.length) {
+					return;
+				}
+				const result = await this.extensionGalleryService.getExtensions(extensionIds, token);
 				result.forEach(extension => galleryExtensions.set(extension.identifier.id.toLowerCase(), extension));
 			})(),
 			Promise.all(extensionsWithIdAndVersion.map(async ({ id, version }) => {

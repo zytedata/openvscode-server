@@ -21,8 +21,15 @@ interface YamlNode extends yamlTypes.Node {
 function isYamlMap(node: YamlAstNode | undefined): node is yamlTypes.YAMLMap {
 	return !!node && (node.type === yamlUtil.Type.MAP || node.type === yamlUtil.Type.FLOW_MAP);
 }
-function isYamlSeq(node: YamlAstNode | undefined): node is yamlTypes.YAMLSeq {
+export function isYamlSeq(node: YamlAstNode | undefined): node is yamlTypes.YAMLSeq {
 	return !!node && (node.type === yamlUtil.Type.SEQ || node.type === yamlUtil.Type.FLOW_SEQ);
+}
+export function isYamlScalar(node: yamlTypes.Node | undefined): node is yamlTypes.Scalar {
+	return !!node && (node.type === yamlUtil.Type.BLOCK_FOLDED ||
+		node.type === yamlUtil.Type.BLOCK_LITERAL ||
+		node.type === yamlUtil.Type.PLAIN ||
+		node.type === yamlUtil.Type.QUOTE_DOUBLE ||
+		node.type === yamlUtil.Type.QUOTE_SINGLE);
 }
 type YamlDocument = yaml.Document & YamlNode;
 
@@ -34,7 +41,7 @@ function getNodeIndent(node: yamlTypes.Node | yaml.Document | null): number {
 
 export class GitpodPluginModel {
 
-	private readonly document: YamlDocument;
+	readonly document: YamlDocument;
 
 	constructor(content: string) {
 		this.document = <YamlDocument>yaml.parseDocument(content, { keepCstNodes: true });

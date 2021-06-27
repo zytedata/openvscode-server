@@ -169,7 +169,7 @@ export interface IExtensionGalleryService {
 	getAllVersions(extension: IGalleryExtension, compatible: boolean): Promise<IGalleryExtensionVersion[]>;
 	getExtensionsReport(): Promise<IReportedExtension[]>;
 	getCompatibleExtension(extension: IGalleryExtension): Promise<IGalleryExtension | null>;
-	getCompatibleExtension(id: IExtensionIdentifier, version?: string): Promise<IGalleryExtension | null>;
+	getCompatibleExtension(id: IExtensionIdentifier, version?: string, token?: CancellationToken): Promise<IGalleryExtension | null>;
 }
 
 export interface InstallExtensionEvent {
@@ -217,7 +217,7 @@ export interface IExtensionManagementService {
 
 	zip(extension: ILocalExtension): Promise<URI>;
 	unzip(zipLocation: URI): Promise<IExtensionIdentifier>;
-	getManifest(vsix: URI): Promise<IExtensionManifest>;
+	getManifest(vsix: URI, token?: CancellationToken): Promise<IExtensionManifest>;
 	install(vsix: URI, options?: InstallVSIXOptions): Promise<ILocalExtension>;
 	canInstall(extension: IGalleryExtension): Promise<boolean>;
 	installFromGallery(extension: IGalleryExtension, options?: InstallOptions): Promise<ILocalExtension>;
