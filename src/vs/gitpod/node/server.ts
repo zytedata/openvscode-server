@@ -35,6 +35,7 @@ import { ClientConnectionEvent, IPCServer, IServerChannel } from 'vs/base/parts/
 import { PersistentProtocol, ProtocolConstants } from 'vs/base/parts/ipc/common/ipc.net';
 import { NodeSocket, WebSocketNodeSocket } from 'vs/base/parts/ipc/node/ipc.net';
 import { RemoteTerminalChannelServer } from 'vs/gitpod/node/remoteTerminalChannelServer';
+import type { ServerExtensionHostConnection } from 'vs/gitpod/node/server-extension-host-connection';
 import { infoServiceClient, statusServiceClient, supervisorDeadlines, supervisorMetadata } from 'vs/gitpod/node/supervisor-client';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { ConfigurationService } from 'vs/platform/configuration/common/configurationService';
@@ -49,7 +50,7 @@ import { IExtensionGalleryService, IExtensionManagementCLIService, IExtensionMan
 import { ExtensionManagementCLIService } from 'vs/platform/extensionManagement/common/extensionManagementCLIService';
 import { ExtensionManagementChannel } from 'vs/platform/extensionManagement/common/extensionManagementIpc';
 import { ExtensionManagementService } from 'vs/platform/extensionManagement/node/extensionManagementService';
-import { ExtensionIdentifier, IExtensionDescription } from 'vs/platform/extensions/common/extensions';
+import { ExtensionIdentifier, ExtensionType, IExtensionDescription } from 'vs/platform/extensions/common/extensions';
 import { IFileService } from 'vs/platform/files/common/files';
 import { FileService } from 'vs/platform/files/common/fileService';
 import { DiskFileSystemProvider } from 'vs/platform/files/node/diskFileSystemProvider';
@@ -76,6 +77,7 @@ import { ExtensionScanner, ExtensionScannerInput, IExtensionReference } from 'vs
 import { IGetEnvironmentDataArguments, IRemoteAgentEnvironmentDTO, IScanExtensionsArguments, IScanSingleExtensionArguments } from 'vs/workbench/services/remote/common/remoteAgentEnvironmentChannel';
 import { REMOTE_FILE_SYSTEM_CHANNEL_NAME } from 'vs/workbench/services/remote/common/remoteAgentFileSystemChannel';
 import { RemoteExtensionLogFileName } from 'vs/workbench/services/remote/common/remoteAgentService';
+import * as rpc from 'vscode-jsonrpc';
 
 const uriTransformerPath = path.join(__dirname, '../../../gitpodUriTransformer');
 const rawURITransformerFactory: (remoteAuthority: string) => IRawURITransformer = <any>require.__$__nodeRequire(uriTransformerPath);
@@ -666,6 +668,7 @@ async function main(): Promise<void> {
 			synchingTasks
 		));
 
+		const extensionGalleryService = accessor.get(IExtensionGalleryService);
 		const extensionManagementService = accessor.get(IExtensionManagementService);
 		channelServer.registerChannel('extensions', new ExtensionManagementChannel(extensionManagementService, requestContext => new URITransformer(rawURITransformerFactory(requestContext))));
 		installInitialExtensions(
@@ -683,14 +686,6 @@ async function main(): Promise<void> {
 		bufferLogService.logger = new SpdLogLogger('main', join(environmentService.logsPath, `${RemoteExtensionLogFileName}.log`), true, bufferLogService.getLevel());
 
 		const clients = new Map<string, Client>();
-
-		interface ActiveCliIpcHooKMessage {
-			type: 'ACTIVE_CLI_IPC_HOOK'
-			value: string
-		}
-		function isActiveCliIpcHooKMessage(msg: any): msg is ActiveCliIpcHooKMessage {
-			return !!msg && (<ActiveCliIpcHooKMessage>msg).type === 'ACTIVE_CLI_IPC_HOOK';
-		}
 		let activeCliIpcHook: string | undefined;
 
 		const server = http.createServer(async (req, res) => {
@@ -977,6 +972,7 @@ async function main(): Promise<void> {
 										return;
 									}
 									disposed = true;
+									extensionHostConnection.dispose();
 									socket.end();
 									extensionHost.kill();
 									client.extensionHost = undefined;
@@ -1009,11 +1005,65 @@ async function main(): Promise<void> {
 									}
 								};
 								extensionHost.on('message', readyListener);
-								extensionHost.on('message', (msg: any) => {
-									if (isActiveCliIpcHooKMessage(msg)) {
-										activeCliIpcHook = msg.value;
+
+								class MessageReader extends rpc.IPCMessageReader {
+									override listen(callback: rpc.DataCallback): void {
+										super.listen((msg: any) => {
+											if ('jsonrpc' in msg) {
+												callback(msg);
+											}
+										});
 									}
+								}
+								const extensionHostConnection = rpc.createMessageConnection(
+									new MessageReader(extensionHost),
+									new rpc.IPCMessageWriter(extensionHost),
+									{
+										error: msg => logService.error(msg),
+										info: msg => logService.info(msg),
+										log: msg => logService.info(msg),
+										warn: msg => logService.warn(msg)
+									}
+								) as any as ServerExtensionHostConnection;
+								extensionHostConnection.onNotification('setActiveCliIpcHook', (cliIpcHook: string) => {
+									activeCliIpcHook = cliIpcHook;
 								});
+								extensionHostConnection.onRequest('validateExtensions', async (param, token) => {
+									const links = new Set<string>();
+									const extensions = new Set<string>();
+									const missingMachined = new Set<string>();
+									const lookup = new Set(param.extensions.map(({ id }) => id));
+									lookup.add('github.vscode-pull-request-github');
+									const extensionIds = param.extensions.filter(({ version }) => version === undefined).map(({ id }) => id);
+									const extensionsWithIdAndVersion = param.extensions.filter(({ version }) => version !== undefined);
+									await Promise.all([
+										extensionManagementService.getInstalled(ExtensionType.User).then(extensions => {
+											for (const extension of extensions) {
+												const id = extension.identifier.id.toLowerCase();
+												if (extension.isMachineScoped && !lookup.has(id)) {
+													missingMachined.add(id);
+												}
+											}
+										}),
+										extensionGalleryService.getExtensions(extensionIds, token).then(result =>
+											result.forEach(extension => extensions.add(extension.identifier.id.toLocaleLowerCase())), () => { }),
+										...extensionsWithIdAndVersion.map(({ id, version }) =>
+											extensionGalleryService.getCompatibleExtension({ id }, version, token).
+												then(extension => extension && extensions.add(extension.identifier.id.toLocaleLowerCase()), () => { })),
+										...param.links.map(async vsix => {
+											try {
+												await extensionManagementService.getManifest(URI.parse(vsix), token);
+												links.add(vsix);
+											} catch { }
+										}),
+									]);
+									return {
+										extensions: [...extensions],
+										links: [...links],
+										missingMachined: [...missingMachined],
+									};
+								});
+								extensionHostConnection.listen();
 								client.extensionHost = extensionHost;
 								logService.info(`[${token}] Extension host is started.`);
 							} catch (e) {

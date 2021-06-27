@@ -29,9 +29,12 @@ import ReconnectingWebSocket from 'reconnecting-websocket';
 import { URL } from 'url';
 import * as util from 'util';
 import * as vscode from 'vscode';
+import * as rpc from 'vscode-jsonrpc';
 import { ConsoleLogger, listen as doListen } from 'vscode-ws-jsonrpc';
-import { GitpodPluginModel } from './gitpod-plugin-model';
+import { ThrottledDelayer } from './async';
+import { GitpodPluginModel, isYamlScalar, isYamlSeq } from './gitpod-plugin-model';
 import WebSocket = require('ws');
+import type { ServerExtensionHostConnection } from '../../../src/vs/gitpod/node/server-extension-host-connection';
 
 export async function activate(context: vscode.ExtensionContext) {
 	if (typeof vscode.env.remoteName === 'undefined' || context.extension.extensionKind !== vscode.ExtensionKind.Workspace) {
@@ -927,13 +930,30 @@ export async function activate(context: vscode.ExtensionContext) {
 	})());
 	//#endregion
 
+	//#region code server connection
+	class MessageReader extends rpc.IPCMessageReader {
+		override listen(callback: rpc.DataCallback): void {
+			super.listen((msg: any) => {
+				if ('jsonrpc' in msg) {
+					callback(msg);
+				}
+			});
+		}
+	}
+	const codeServerConnection = rpc.createMessageConnection(
+		new MessageReader(process),
+		new rpc.IPCMessageWriter(process),
+		console
+	) as any as ServerExtensionHostConnection;
+	codeServerConnection.listen();
+	//#endregion
+
 	//#region cli
 	const vscodeIpcHookCli = process.env['VSCODE_IPC_HOOK_CLI'];
-	if (vscodeIpcHookCli && process.send) {
-		const sendActiveCliIpcHookMessage = process.send.bind(process, { type: 'ACTIVE_CLI_IPC_HOOK', value: vscodeIpcHookCli });
+	if (vscodeIpcHookCli) {
 		function updateIpcHookCli(): void {
 			if (vscode.window.state.focused) {
-				sendActiveCliIpcHookMessage();
+				codeServerConnection.sendNotification('setActiveCliIpcHook', vscodeIpcHookCli!);
 			}
 		}
 		updateIpcHookCli();
@@ -965,6 +985,199 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 		await vscode.workspace.applyEdit(edit);
 	}));
+	const deprecatedUserExtensionMessage = 'user uploaded extensions are deprecated';
+	const missingExtensionMessageSuffix = ' extension is not synced, but not added in .gitpod.yml';
+	const gitpodDiagnostics = vscode.languages.createDiagnosticCollection('gitpod');
+	const validateGitpodFileDelayer = new ThrottledDelayer(150);
+	const validateExtensionseDelayer = new ThrottledDelayer(1000); /** it can be very expensive for links to big extensions */
+	let validateGitpodFileTokenSource: vscode.CancellationTokenSource | undefined;
+	let resolveAllDeprecated: vscode.CodeAction | undefined;
+	function validateGitpodFile(): void {
+		resolveAllDeprecated = undefined;
+		if (validateGitpodFileTokenSource) {
+			validateGitpodFileTokenSource.cancel();
+		}
+		validateGitpodFileTokenSource = new vscode.CancellationTokenSource();
+		const token = validateGitpodFileTokenSource.token;
+		validateGitpodFileDelayer.trigger(async () => {
+			if (token.isCancellationRequested) {
+				return;
+			}
+			let diagnostics: vscode.Diagnostic[] | undefined;
+			function pushDiagnostic(diagnostic: vscode.Diagnostic): void {
+				if (!diagnostics) {
+					diagnostics = [];
+				}
+				diagnostics.push(diagnostic);
+			}
+			function publishDiagnostics(): void {
+				if (!token.isCancellationRequested) {
+					gitpodDiagnostics.set(gitpodFileUri, diagnostics);
+				}
+			}
+			try {
+				const toLink = new Map<string, vscode.Range>();
+				const toFind = new Map<string, {
+					version?: string,
+					range: vscode.Range
+				}>();
+				let document: vscode.TextDocument | undefined;
+				try {
+					document = await vscode.workspace.openTextDocument(gitpodFileUri);
+				} catch { }
+				if (token.isCancellationRequested) {
+					return;
+				}
+				const model = document && new GitpodPluginModel(document.getText());
+				const extensions = model && model.document.getIn(['vscode', 'extensions'], true);
+				if (document && extensions && isYamlSeq(extensions)) {
+					resolveAllDeprecated = new vscode.CodeAction('Resolve all against Open VSX.', vscode.CodeActionKind.QuickFix);
+					resolveAllDeprecated.diagnostics = [];
+					resolveAllDeprecated.isPreferred = true;
+					for (let i = 0; i < extensions.items.length; i++) {
+						const item = extensions.items[i];
+						if (!isYamlScalar(item) || !item.range) {
+							continue;
+						}
+						const extension = item.value;
+						if (!(typeof extension === 'string')) {
+							continue;
+						}
+						let link: vscode.Uri | undefined;
+						try {
+							link = vscode.Uri.parse(extension.trim(), true);
+							if (link.scheme !== 'http' && link.scheme !== 'https') {
+								link = undefined;
+							}
+						} catch { }
+						if (link) {
+							toLink.set(link.toString(), new vscode.Range(document.positionAt(item.range[0]), document.positionAt(item.range[1])));
+						} else {
+							const [idAndVersion, hash] = extension.trim().split(':', 2);
+							let endPosition = document.positionAt(item.range[1]);
+							if (hash) {
+								const hashOffset = item.range[0] + extension.indexOf(':');
+								const range = new vscode.Range(document.positionAt(hashOffset), endPosition);
+								endPosition = range.start;
+
+								const diagnostic = new vscode.Diagnostic(range, deprecatedUserExtensionMessage, vscode.DiagnosticSeverity.Warning);
+								diagnostic.source = 'gitpod';
+								diagnostic.tags = [vscode.DiagnosticTag.Deprecated];
+								pushDiagnostic(diagnostic);
+								resolveAllDeprecated.diagnostics.unshift(diagnostic);
+							}
+							const [id, version] = idAndVersion.split('@', 2);
+							toFind.set(id.toLowerCase(), { version, range: new vscode.Range(document.positionAt(item.range[0]), endPosition) });
+						}
+					}
+					if (resolveAllDeprecated.diagnostics.length) {
+						resolveAllDeprecated.edit = new vscode.WorkspaceEdit();
+						for (const diagnostic of resolveAllDeprecated.diagnostics) {
+							resolveAllDeprecated.edit.delete(gitpodFileUri, diagnostic.range);
+						}
+					} else {
+						resolveAllDeprecated = undefined;
+					}
+					publishDiagnostics();
+				}
+
+				await validateExtensionseDelayer.trigger(async () => {
+					if (token.isCancellationRequested) {
+						return;
+					}
+
+					const result = await codeServerConnection.sendRequest('validateExtensions', {
+						extensions: [...toFind.entries()].map(([id, { version }]) => ({ id, version })),
+						links: [...toLink.keys()]
+					}, token);
+					if (token.isCancellationRequested) {
+						return;
+					}
+
+					for (const id of result.extensions) {
+						toFind.delete(id.toLowerCase());
+					}
+					for (const [id, { range, version }] of toFind) {
+						let message: string;
+						if (version) {
+							message = `could not find a compatible version for ${id}@${version} extension in Open VSX`;
+						} else {
+							message = `could not find ${id} extension in Open VSX`;
+						}
+						const diagnostic = new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Error);
+						diagnostic.source = 'gitpod';
+						pushDiagnostic(diagnostic);
+					}
+
+					for (const link of result.links) {
+						toLink.delete(link);
+					}
+					for (const [link, range] of toLink) {
+						const diagnostic = new vscode.Diagnostic(range, `${link} does not point to a valid VSIX file`, vscode.DiagnosticSeverity.Error);
+						diagnostic.source = 'gitpod';
+						pushDiagnostic(diagnostic);
+					}
+
+					for (const id of result.missingMachined) {
+						const diagnostic = new vscode.Diagnostic(new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 1)), id + missingExtensionMessageSuffix, vscode.DiagnosticSeverity.Warning);
+						diagnostic.source = 'gitpod';
+						pushDiagnostic(diagnostic);
+					}
+				});
+			} finally {
+				publishDiagnostics();
+			}
+		});
+	}
+	context.subscriptions.push(vscode.languages.registerCodeActionsProvider({
+		pattern: gitpodFileUri.fsPath
+	}, {
+		provideCodeActions: (document, _, context) => {
+			const codeActions: vscode.CodeAction[] = [];
+			for (const diagnostic of context.diagnostics) {
+				if (diagnostic.message === deprecatedUserExtensionMessage) {
+					if (resolveAllDeprecated) {
+						codeActions.push(resolveAllDeprecated);
+					}
+					const resolveSingle = new vscode.CodeAction('Resolve against Open VSX.', vscode.CodeActionKind.QuickFix);
+					resolveSingle.diagnostics = [diagnostic];
+					resolveSingle.isPreferred = false;
+					const singleEdit = new vscode.WorkspaceEdit();
+					singleEdit.delete(document.uri, diagnostic.range);
+					resolveSingle.edit = singleEdit;
+					codeActions.push(resolveSingle);
+				}
+				const missingIndex = diagnostic.message.indexOf(missingExtensionMessageSuffix);
+				if (missingIndex !== -1) {
+					const id = diagnostic.message.substr(0, missingIndex);
+					const title = `Add ${id} extension to .gitpod.yml.`;
+					const addToGitpodConfig = new vscode.CodeAction(title, vscode.CodeActionKind.QuickFix);
+					addToGitpodConfig.diagnostics = [diagnostic];
+					addToGitpodConfig.isPreferred = true;
+					addToGitpodConfig.command = {
+						title: title,
+						command: 'gitpod.extensions.addToConfig',
+						arguments: [diagnostic.message.substr(0, missingIndex)]
+					};
+					codeActions.push(addToGitpodConfig);
+				}
+			}
+			return codeActions;
+		}
+	}));
+	validateGitpodFile();
+	context.subscriptions.push(gitpodDiagnostics);
+	context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(e => {
+		if (e.document.uri.toString() === gitpodFileUri.toString()) {
+			validateGitpodFile();
+		}
+	}));
+	const gitpodFileWatcher = vscode.workspace.createFileSystemWatcher(gitpodFileUri.fsPath);
+	context.subscriptions.push(gitpodFileWatcher);
+	context.subscriptions.push(gitpodFileWatcher.onDidCreate(() => validateGitpodFile()));
+	context.subscriptions.push(gitpodFileWatcher.onDidChange(() => validateGitpodFile()));
+	context.subscriptions.push(gitpodFileWatcher.onDidDelete(() => validateGitpodFile()));
+	context.subscriptions.push(vscode.extensions.onDidChange(() => validateGitpodFile()));
 	//#endregion
 
 	//#region notifications

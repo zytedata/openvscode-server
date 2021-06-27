@@ -33,4 +33,4 @@ github:
     pullRequestsFromForks: true
 vscode:
   extensions:
-    - dbaeumer.vscode-eslint@2.1.3:1NRvj3UKNTNwmYjptmUmIw==
+    - dbaeumer.vscode-eslint

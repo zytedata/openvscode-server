@@ -409,11 +409,11 @@ export class ExtensionGalleryService implements IExtensionGalleryService {
 		return result;
 	}
 
-	async getCompatibleExtension(arg1: IExtensionIdentifier | IGalleryExtension, version?: string): Promise<IGalleryExtension | null> {
-		return this.getCompatibleExtensionByEngine(arg1, version);
+	async getCompatibleExtension(arg1: IExtensionIdentifier | IGalleryExtension, version?: string, token?: CancellationToken): Promise<IGalleryExtension | null> {
+		return this.getCompatibleExtensionByEngine(arg1, version, token);
 	}
 
-	private async getCompatibleExtensionByEngine(arg1: IExtensionIdentifier | IGalleryExtension, version?: string): Promise<IGalleryExtension | null> {
+	private async getCompatibleExtensionByEngine(arg1: IExtensionIdentifier | IGalleryExtension, version?: string, token: CancellationToken = CancellationToken.None): Promise<IGalleryExtension | null> {
 		const extension: IGalleryExtension | null = isIExtensionIdentifier(arg1) ? null : arg1;
 		if (extension && extension.properties.engine && isEngineValid(extension.properties.engine, this.productService.version, this.productService.date)) {
 			return extension;
@@ -430,7 +430,7 @@ export class ExtensionGalleryService implements IExtensionGalleryService {
 			query = query.withFilter(FilterType.ExtensionName, id);
 		}
 
-		const { galleryExtensions } = await this.queryGallery(query, CancellationToken.None);
+		const { galleryExtensions } = await this.queryGallery(query, token);
 		const [rawExtension] = galleryExtensions;
 		if (!rawExtension || !rawExtension.versions.length) {
 			return null;
@@ -447,7 +447,7 @@ export class ExtensionGalleryService implements IExtensionGalleryService {
 			return null;
 		}
 
-		const rawVersion = await this.getLastValidExtensionVersion(rawExtension, rawExtension.versions);
+		const rawVersion = await this.getLastValidExtensionVersion(rawExtension, rawExtension.versions, token);
 		if (rawVersion) {
 			return toExtension(rawExtension, rawVersion, 0, query);
 		}
@@ -742,12 +742,12 @@ export class ExtensionGalleryService implements IExtensionGalleryService {
 		}
 	}
 
-	private async getLastValidExtensionVersion(extension: IRawGalleryExtension, versions: IRawGalleryExtensionVersion[]): Promise<IRawGalleryExtensionVersion | null> {
+	private async getLastValidExtensionVersion(extension: IRawGalleryExtension, versions: IRawGalleryExtensionVersion[], token?: CancellationToken): Promise<IRawGalleryExtensionVersion | null> {
 		const version = this.getLastValidExtensionVersionFromProperties(extension, versions);
 		if (version) {
 			return version;
 		}
-		return this.getLastValidExtensionVersionRecursively(extension, versions);
+		return this.getLastValidExtensionVersionRecursively(extension, versions, token);
 	}
 
 	private getLastValidExtensionVersionFromProperties(extension: IRawGalleryExtension, versions: IRawGalleryExtensionVersion[]): IRawGalleryExtensionVersion | null {
@@ -763,7 +763,7 @@ export class ExtensionGalleryService implements IExtensionGalleryService {
 		return null;
 	}
 
-	private async getEngine(version: IRawGalleryExtensionVersion): Promise<string> {
+	private async getEngine(version: IRawGalleryExtensionVersion, token?: CancellationToken): Promise<string> {
 		const engine = getEngine(version);
 		if (engine) {
 			return engine;
@@ -775,7 +775,7 @@ export class ExtensionGalleryService implements IExtensionGalleryService {
 		}
 
 		const headers = { 'Accept-Encoding': 'gzip' };
-		const context = await this.getAsset(manifestAsset, { headers });
+		const context = await this.getAsset(manifestAsset, { headers }, token);
 		const manifest = await asJson<IExtensionManifest>(context);
 		if (manifest) {
 			return manifest.engines.vscode;
@@ -784,15 +784,15 @@ export class ExtensionGalleryService implements IExtensionGalleryService {
 		throw new Error('Error while reading manifest');
 	}
 
-	private async getLastValidExtensionVersionRecursively(extension: IRawGalleryExtension, versions: IRawGalleryExtensionVersion[]): Promise<IRawGalleryExtensionVersion | null> {
+	private async getLastValidExtensionVersionRecursively(extension: IRawGalleryExtension, versions: IRawGalleryExtensionVersion[], token?: CancellationToken): Promise<IRawGalleryExtensionVersion | null> {
 		if (!versions.length) {
 			return null;
 		}
 
 		const version = versions[0];
-		const engine = await this.getEngine(version);
+		const engine = await this.getEngine(version, token);
 		if (!isEngineValid(engine, this.productService.version, this.productService.date)) {
-			return this.getLastValidExtensionVersionRecursively(extension, versions.slice(1));
+			return this.getLastValidExtensionVersionRecursively(extension, versions.slice(1), token);
 		}
 
 		return {
