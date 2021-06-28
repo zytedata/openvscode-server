@@ -952,9 +952,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	const vscodeIpcHookCli = process.env['VSCODE_IPC_HOOK_CLI'];
 	if (vscodeIpcHookCli) {
 		function updateIpcHookCli(): void {
-			if (vscode.window.state.focused) {
-				codeServerConnection.sendNotification('setActiveCliIpcHook', vscodeIpcHookCli!);
-			}
+			codeServerConnection.sendNotification('setActiveCliIpcHook',
+				vscode.window.state.focused ? vscodeIpcHookCli : undefined
+			);
 		}
 		updateIpcHookCli();
 		context.subscriptions.push(vscode.window.onDidChangeWindowState(() => updateIpcHookCli()));
