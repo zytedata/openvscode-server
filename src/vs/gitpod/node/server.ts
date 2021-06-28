@@ -687,6 +687,20 @@ async function main(): Promise<void> {
 
 		const clients = new Map<string, Client>();
 		let activeCliIpcHook: string | undefined;
+		const didChangeActiveCliIpcHookEmitter = new Emitter<void>();
+		function withActiveCliIpcHook(cb: (activeCliIpcHook: string) => void): IDisposable {
+			if (activeCliIpcHook) {
+				cb(activeCliIpcHook);
+				return { dispose: () => { } };
+			}
+			const listener = didChangeActiveCliIpcHookEmitter.event(() => {
+				if (activeCliIpcHook) {
+					listener.dispose();
+					cb(activeCliIpcHook);
+				}
+			});
+			return listener;
+		}
 
 		const server = http.createServer(async (req, res) => {
 			if (!req.url) {
@@ -707,18 +721,18 @@ async function main(): Promise<void> {
 				}
 
 				if (pathname === '/cli') {
-					if (!activeCliIpcHook) {
-						return serveError(req, res, 404, 'Not found.');
-					}
 					if (req.method !== 'POST') {
 						res.writeHead(200, { 'Content-Type': 'text/plain' });
 						return res.end(activeCliIpcHook);
 					}
-					req.pipe(http.request({
-						socketPath: activeCliIpcHook,
-						method: req.method,
-						headers: req.headers
-					}, res2 => res2.pipe(res)));
+					const listener = withActiveCliIpcHook(activeCliIpcHook =>
+						req.pipe(http.request({
+							socketPath: activeCliIpcHook,
+							method: req.method,
+							headers: req.headers
+						}, res2 => res2.pipe(res)))
+					);
+					req.on('close', () => listener.dispose());
 					return;
 				}
 
@@ -1025,9 +1039,27 @@ async function main(): Promise<void> {
 										warn: msg => logService.warn(msg)
 									}
 								) as any as ServerExtensionHostConnection;
-								extensionHostConnection.onNotification('setActiveCliIpcHook', (cliIpcHook: string) => {
-									activeCliIpcHook = cliIpcHook;
+
+								let extensionHostCliIpcHook: string | undefined;
+								function cleanActiveCliIpcHook(): void {
+									if (!activeCliIpcHook || activeCliIpcHook !== extensionHostCliIpcHook) {
+										return;
+									}
+									activeCliIpcHook = undefined;
+									didChangeActiveCliIpcHookEmitter.fire(undefined);
+								}
+								extensionHostConnection.onClose(cleanActiveCliIpcHook);
+								extensionHostConnection.onDispose(cleanActiveCliIpcHook);
+								extensionHostConnection.onNotification('setActiveCliIpcHook', (cliIpcHook: string | undefined) => {
+									if (!cliIpcHook) {
+										cleanActiveCliIpcHook();
+									} else if (activeCliIpcHook !== cliIpcHook) {
+										activeCliIpcHook = cliIpcHook;
+										didChangeActiveCliIpcHookEmitter.fire(undefined);
+									}
+									extensionHostCliIpcHook = cliIpcHook;
 								});
+
 								extensionHostConnection.onRequest('validateExtensions', async (param, token) => {
 									const links = new Set<string>();
 									const extensions = new Set<string>();

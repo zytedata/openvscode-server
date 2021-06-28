@@ -178,32 +178,40 @@ async function sendCommand(command: PipeCommand): Promise<string> {
 		port = Number(process.env.GITPOD_THEIA_PORT);
 	}
 	const http = await import('http');
-	return new Promise<string>((resolve, reject) => {
-		const req = http.request({
-			hostname: 'localhost',
-			port,
-			protocol: 'http:',
-			path: '/cli',
-			method: 'POST',
-			timeout: 5000
-		}, res => {
-			const chunks: string[] = [];
-			res.setEncoding('utf8');
-			res.on('data', d => chunks.push(d));
-			res.on('end', () => {
-				const result = chunks.join('');
-				if (res.statusCode !== 200) {
-					reject(new Error(`Bad status code: ${res.statusCode}: ${result}`));
-				} else {
-					resolve(result);
-				}
+	while (true) {
+		try {
+			return await new Promise<string>((resolve, reject) => {
+				const req = http.request({
+					hostname: 'localhost',
+					port,
+					protocol: 'http:',
+					path: '/cli',
+					method: 'POST'
+				}, res => {
+					const chunks: string[] = [];
+					res.setEncoding('utf8');
+					res.on('data', d => chunks.push(d));
+					res.on('end', () => {
+						const result = chunks.join('');
+						if (res.statusCode !== 200) {
+							reject(new Error(`Bad status code: ${res.statusCode}: ${result}`));
+						} else {
+							resolve(result);
+						}
+					});
+				});
+				req.on('error', err => reject(err));
+				req.write(JSON.stringify(command));
+				req.end();
 			});
-		});
-
-		req.on('error', err => reject(err));
-		req.write(JSON.stringify(command));
-		req.end();
-	});
+		} catch (e) {
+			// Code Server is not running yet, let's try again
+			if (e.code !== 'ECONNREFUSED') {
+				throw e;
+			}
+			await new Promise(resolve => setTimeout(resolve, 500));
+		}
+	}
 }
 
 function eventuallyExit(code: number): void {

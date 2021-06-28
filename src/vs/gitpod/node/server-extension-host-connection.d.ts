@@ -23,8 +23,10 @@ export type setActiveCliIpcHookMethod = 'setActiveCliIpcHook';
 export interface ServerExtensionHostConnection {
 	sendRequest(method: validateExtensionsMethod, param: ValidateExtensionsParam, token: rpc.CancellationToken): Promise<ValidateExtensionsResult>;
 	onRequest(method: validateExtensionsMethod, handler: (param: ValidateExtensionsParam, token: rpc.CancellationToken) => Promise<ValidateExtensionsResult>): void
-	sendNotification(method: setActiveCliIpcHookMethod, cliIpcHook: string): void;
-	onNotification(method: setActiveCliIpcHookMethod, handler: (cliIpcHook: string) => void): void;
+	sendNotification(method: setActiveCliIpcHookMethod, cliIpcHook: string | undefined): void;
+	onNotification(method: setActiveCliIpcHookMethod, handler: (cliIpcHook: string | undefined) => void): void;
 	listen(): void;
 	dispose(): void;
+	onClose: rpc.Event<void>;
+	onDispose: rpc.Event<void>;
 }
