@@ -670,9 +670,10 @@ async function main(): Promise<void> {
 
 		const extensionGalleryService = accessor.get(IExtensionGalleryService);
 		const extensionManagementService = accessor.get(IExtensionManagementService);
+		const extensionManagementCLIService = accessor.get(IExtensionManagementCLIService);
 		channelServer.registerChannel('extensions', new ExtensionManagementChannel(extensionManagementService, requestContext => new URITransformer(rawURITransformerFactory(requestContext))));
 		installInitialExtensions(
-			accessor.get(IExtensionManagementCLIService),
+			extensionManagementCLIService,
 			accessor.get(IRequestService),
 			accessor.get(IFileService),
 			logService
@@ -1059,12 +1060,21 @@ async function main(): Promise<void> {
 									}
 									extensionHostCliIpcHook = cliIpcHook;
 								});
+								extensionManagementService.onDidInstallExtension(() => extensionHostConnection.sendNotification('onDidInstallExtension'));
+								extensionManagementService.onDidUninstallExtension(() => extensionHostConnection.sendNotification('onDidUninstallExtension'));
 
+								extensionHostConnection.onRequest('installExtensionFromConfig', id => extensionManagementCLIService.installExtensions([id], [], true, false, {
+									log: s => logService.debug(s),
+									error: s => logService.error(s)
+								}).catch(e => {
+									logService.error(`code server: failed to install ${id} extension from .gitpod.yml:`, e);
+								}));
 								extensionHostConnection.onRequest('validateExtensions', async (param, token) => {
 									const links = new Set<string>();
 									const extensions = new Set<string>();
 									const missingMachined = new Set<string>();
 									const lookup = new Set(param.extensions.map(({ id }) => id));
+									const uninstalled = new Set<string>([...lookup]);
 									lookup.add('github.vscode-pull-request-github');
 									const extensionIds = param.extensions.filter(({ version }) => version === undefined).map(({ id }) => id);
 									const extensionsWithIdAndVersion = param.extensions.filter(({ version }) => version !== undefined);
@@ -1072,11 +1082,12 @@ async function main(): Promise<void> {
 										extensionManagementService.getInstalled(ExtensionType.User).then(extensions => {
 											for (const extension of extensions) {
 												const id = extension.identifier.id.toLowerCase();
+												uninstalled.delete(id);
 												if (extension.isMachineScoped && !lookup.has(id)) {
 													missingMachined.add(id);
 												}
 											}
-										}),
+										}, () => { }),
 										extensionGalleryService.getExtensions(extensionIds, token).then(result =>
 											result.forEach(extension => extensions.add(extension.identifier.id.toLocaleLowerCase())), () => { }),
 										...extensionsWithIdAndVersion.map(({ id, version }) =>
@@ -1093,6 +1104,7 @@ async function main(): Promise<void> {
 										extensions: [...extensions],
 										links: [...links],
 										missingMachined: [...missingMachined],
+										uninstalled: [...uninstalled]
 									};
 								});
 								extensionHostConnection.listen();
