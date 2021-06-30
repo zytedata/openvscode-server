@@ -952,7 +952,8 @@ async function main(): Promise<void> {
 										VSCODE_EXTHOST_WILL_SEND_SOCKET: 'true',
 										VSCODE_HANDLES_UNCAUGHT_ERRORS: 'true',
 										VSCODE_LOG_STACK: 'true',
-										VSCODE_LOG_LEVEL: environmentService.verbose ? 'trace' : environmentService.logLevel
+										VSCODE_LOG_LEVEL: environmentService.verbose ? 'trace' : environmentService.logLevel,
+										GITPOD_CODE_HOST: devMode ? undefined : process.env['GITPOD_HOST']
 									},
 									// see https://github.com/akosyakov/gitpod-code/blob/33b49a273f1f6d44f303426b52eaf89f0f5cc596/src/vs/base/parts/ipc/node/ipc.cp.ts#L72-L78
 									execArgv: [],
