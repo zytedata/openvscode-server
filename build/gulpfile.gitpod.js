@@ -138,7 +138,7 @@ const outGitpodWebMin = outGitpodWeb + '-min';
 const minifyGitpodWebTask = task.define('minify-gitpod-web', task.series(
 	optimizeGitpodWebTask,
 	util.rimraf(outGitpodWebMin),
-	common.minifyTask(outGitpodWeb, '/out')
+	common.minifyTask(outGitpodWeb)
 ));
 gulp.task(minifyGitpodWebTask);
 
