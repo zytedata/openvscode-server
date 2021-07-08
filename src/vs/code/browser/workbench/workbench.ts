@@ -267,6 +267,7 @@ async function doStart(): Promise<IDisposable> {
 			host: string
 		}
 		workspaceContextUrl: string
+		workspaceClusterHost: string
 	} = await infoResponse.json();
 	if (_state as any === 'terminated') {
 		return Disposable.None;
@@ -274,19 +275,9 @@ async function doStart(): Promise<IDisposable> {
 
 	const remoteAuthority = window.location.host;
 
-	const webWorkerExtensionHostEndpoint = new URL(document.baseURI);
-	webWorkerExtensionHostEndpoint.host = 'extensions-' + webWorkerExtensionHostEndpoint.host;
-	webWorkerExtensionHostEndpoint.pathname += (location.protocol === 'https:'
-		? 'out/vs/workbench/services/extensions/worker/httpsWebWorkerExtensionHostIframe.html'
-		: 'out/vs/workbench/services/extensions/worker/httpsWebWorkerExtensionHostIframe.html');
-	webWorkerExtensionHostEndpoint.search = '';
-	webWorkerExtensionHostEndpoint.hash = '';
-
-	const webviewEndpoint = new URL(document.baseURI);
-	webviewEndpoint.host = 'webview-' + webviewEndpoint.host;
-	webviewEndpoint.pathname += 'out/vs/workbench/contrib/webview/browser/pre';
-	webviewEndpoint.search = '';
-	webviewEndpoint.hash = '';
+	const wsHostPrefix = !devMode ? info.workspaceId : remoteAuthority.substr(0, remoteAuthority.indexOf('.'));
+	const webWorkerExtensionHostIframeSrc = `https://extensions-foreign.${info.workspaceClusterHost}/${wsHostPrefix}/out/vs/workbench/services/extensions/worker/httpsWebWorkerExtensionHostIframe.html`;
+	const webviewEndpoint = `https://{{uuid}}-webview-foreign.${info.workspaceClusterHost}/${wsHostPrefix}/out/vs/workbench/contrib/webview/browser/pre`;
 
 	// Find workspace to open and payload
 	let foundWorkspace = false;
@@ -624,7 +615,7 @@ async function doStart(): Promise<IDisposable> {
 
 	subscriptions.add(create(document.body, {
 		remoteAuthority,
-		webviewEndpoint: webviewEndpoint.toString(),
+		webviewEndpoint,
 		webSocketFactory: {
 			create: url => {
 				if (_state as any === 'terminated') {
@@ -758,7 +749,7 @@ async function doStart(): Promise<IDisposable> {
 				// TODO
 			}
 		},
-		webWorkerExtensionHostIframeSrc: webWorkerExtensionHostEndpoint.toString(),
+		webWorkerExtensionHostIframeSrc,
 		tunnelProvider,
 		commands: [
 			getTunnels,
