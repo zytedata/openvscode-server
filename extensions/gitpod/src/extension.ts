@@ -249,6 +249,12 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 		async function controlAdmission(level: GitpodServer.AdmissionLevel): Promise<void> {
 			try {
+				if (level === 'everyone') {
+					const confirm = await vscode.window.showWarningMessage('Sharing your workspace with others also means sharing your access to your repository. Everyone with access to the workspace you share can commit in your name.', { modal: true }, 'Share');
+					if (confirm !== 'Share') {
+						return;
+					}
+				}
 				await vscode.window.withProgress({
 					location: vscode.ProgressLocation.Notification,
 					cancellable: true,
