@@ -42,8 +42,9 @@ import { ConfigurationService } from 'vs/platform/configuration/common/configura
 import { ExtensionHostDebugBroadcastChannel } from 'vs/platform/debug/common/extensionHostDebugIpc';
 import { IDownloadService } from 'vs/platform/download/common/download';
 import { DownloadService } from 'vs/platform/download/common/downloadService';
+import { NativeParsedArgs } from 'vs/platform/environment/common/argv';
 import { IEnvironmentService, INativeEnvironmentService } from 'vs/platform/environment/common/environment';
-import { OPTIONS, parseArgs } from 'vs/platform/environment/node/argv';
+import { OptionDescriptions, OPTIONS, parseArgs } from 'vs/platform/environment/node/argv';
 import { NativeEnvironmentService } from 'vs/platform/environment/node/environmentService';
 import { ExtensionGalleryService } from 'vs/platform/extensionManagement/common/extensionGalleryService';
 import { IExtensionGalleryService, IExtensionManagementCLIService, IExtensionManagementService } from 'vs/platform/extensionManagement/common/extensionManagement';
@@ -319,11 +320,19 @@ async function downloadInitialExtension(url: string, requestService: IRequestSer
 	return target;
 }
 
+interface ServerParsedArgs extends NativeParsedArgs {
+	port?: string
+}
+const SERVER_OPTIONS: OptionDescriptions<Required<ServerParsedArgs>> = {
+	...OPTIONS,
+	port: { type: 'string' }
+};
+
 async function main(): Promise<void> {
 	const devMode = !!process.env['VSCODE_DEV'];
 	const connectionToken = generateUuid();
 
-	const parsedArgs = parseArgs(process.argv, OPTIONS);
+	const parsedArgs = parseArgs(process.argv, SERVER_OPTIONS);
 	parsedArgs['user-data-dir'] = URI.file(path.join(os.homedir(), product.dataFolderName)).fsPath;
 	const productService = { _serviceBrand: undefined, ...product };
 	const environmentService = new NativeEnvironmentService(parsedArgs, productService);
@@ -1149,12 +1158,15 @@ async function main(): Promise<void> {
 			});
 		});
 		let port = 3000;
-		if (!devMode && process.env.GITPOD_THEIA_PORT) {
+		if (parsedArgs.port) {
+			port = Number(parsedArgs.port);
+		} else if (!devMode && process.env.GITPOD_THEIA_PORT) {
 			port = Number(process.env.GITPOD_THEIA_PORT);
 		}
 		server.listen(port, '0.0.0.0', () => {
 			const { address, port } = server.address() as net.AddressInfo;
 			logService.info(`Gitpod Code Server listening on ${address}:${port}.`);
+			logService.info(`Web UI available at           https://${address}:${port}`);
 		});
 	});
 }
