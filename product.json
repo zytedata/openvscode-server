@@ -596,7 +596,7 @@
 		},
 		{
 			"name": "redhat.vscode-yaml",
-			"version": "0.17.0",
+			"version": "0.21.1",
 			"repo": "https://github.com/redhat-developer/vscode-yaml",
 			"metadata": {
 				"id": "2061917f-f76a-458a-8da9-f162de22b97e",
@@ -613,6 +613,7 @@
 	"extensionsGallery": {
 		"serviceUrl": "https://open-vsx.org/vscode/gallery",
 		"itemUrl": "https://open-vsx.org/vscode/item",
+		"resourceUrlTemplate": "",
 		"controlUrl": "",
 		"recommendationsUrl": ""
 	},
