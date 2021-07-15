@@ -5,10 +5,9 @@ ports:
     onOpen: open-browser
 tasks:
   - init: |
-      yarn
-      yarn --cwd ./build compile
-      yarn compile
-      yarn download-builtin-extensions
+      export VSCODE_INIT_BUILD_DIR=$(leeway describe "//:init" -t "/tmp/build/{{ .Metadata.Name }}.{{ .Metadata.Version }}")
+      leeway build
+      sudo cp -rup "$VSCODE_INIT_BUILD_DIR/install/." . | true
     command: |
       gp sync-done init
       export NODE_ENV=development
