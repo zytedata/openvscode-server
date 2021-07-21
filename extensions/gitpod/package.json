@@ -6,6 +6,7 @@
   "version": "0.0.9",
   "license": "MIT",
   "preview": true,
+  "icon": "images/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/gitpod-io/vscode.git"
@@ -152,7 +153,21 @@
           "group": "remote_00_gitpod_navigation@130",
           "when": "gitpod.workspaceOwned == true && gitpod.workspaceShared == true"
         }
-      ]
+      ],
+      "walkthroughs": [{
+        "id": "gitpodOnboarding",
+        "title": "Get Started with Gitpod",
+        "description": "Learn how to leverage Gitpod in your daily workflow.",∂ƒ
+        "isFeatured": true,
+        "steps": [{
+          "id": "whatisgitpod",
+          "title": "What is Gitpod?",
+          "description": "A quick introduction to get you started.",
+          "media": {
+            "markdown": "walkthroughs/what-is-gitpod.md"
+          }
+        }]
+      }]
     }
   },
   "scripts": {
