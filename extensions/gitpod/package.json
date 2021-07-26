@@ -154,20 +154,40 @@
           "when": "gitpod.workspaceOwned == true && gitpod.workspaceShared == true"
         }
       ],
-      "walkthroughs": [{
-        "id": "gitpodOnboarding",
-        "title": "Get Started with Gitpod",
-        "description": "Learn how to leverage Gitpod in your daily workflow.",∂ƒ
-        "isFeatured": true,
-        "steps": [{
-          "id": "whatisgitpod",
-          "title": "What is Gitpod?",
-          "description": "A quick introduction to get you started.",
-          "media": {
-            "markdown": "walkthroughs/what-is-gitpod.md"
-          }
-        }]
-      }]
+      "walkthroughs": [
+        {
+          "id": "gitpodOnboarding",
+          "title": "Get Started with Gitpod",
+          "description": "Learn how to leverage Gitpod in your daily workflow.",
+          "isFeatured": true,
+          "steps": [
+            {
+              "id": "whatisgitpod",
+              "title": "Welcome to Gitpod",
+              "description": "A quick introduction to get you started.",
+              "media": {
+                "markdown": "walkthroughs/1-welcome.md"
+              }
+            },
+            {
+              "id": "whyusegitpod",
+              "title": "Why use Gitpod?",
+              "description": "Ephemeral development environments, prebuilds, and other productivity improvements.",
+              "media": {
+                "markdown": "walkthroughs/2-why-use-gitpod.md"
+              }
+            },
+            {
+              "id": "ui",
+              "title": "Learn about the UI",
+              "description": "The terminal, docker, ports. Gitpod is a full-fledge dev environment.",
+              "media": {
+                "markdown": "walkthroughs/3-gitpod-ui.md"
+              }
+            }
+          ]
+        }
+      ]
     }
   },
   "scripts": {
