@@ -1361,13 +1361,29 @@ export async function activate(context: vscode.ExtensionContext) {
 	const layoutInitialized = Boolean(context.globalState.get(layoutInitializedKey));
 	if (!layoutInitialized) {
 		context.globalState.update(layoutInitializedKey, true);
-
 		(async () => {
 			const listener = await pendingInstanceListener;
 			const workspaceContext = listener.info.workspace.context;
 
 			if (PullRequestContext.is(workspaceContext) && /github\.com/i.test(workspaceContextUrl.authority)) {
-				vscode.commands.executeCommand('github.api.preloadPullRequest');
+				await vscode.extensions.getExtension('GitHub.vscode-pull-request-github')?.activate();
+
+				// for reasons unknown, the following call to getSession doesn't return if the user still has
+				// to grant access. So we detect the successful login via the change event
+				vscode.authentication.onDidChangeSessions(async e => {
+					if (e.provider.id === 'github') {
+						await vscode.commands.executeCommand('github.api.preloadPullRequest');
+						vscode.commands.executeCommand('workbench.view.extension.github-pull-request');
+					}
+				});
+				await vscode.authentication.getSession('github', ['read:user', 'user:email', 'repo'], { createIfNone: true });
+				await vscode.commands.executeCommand('github.api.preloadPullRequest');
+				// other processes (like UI sync) will activate other views concurrently,
+				// so we give a hint how the user can start the review using a notification
+				const result = await vscode.window.showInformationMessage('Gitpod has been started on a pull request', 'Start review');
+				if (result) {
+					vscode.commands.executeCommand('workbench.view.extension.github-pull-request');
+				}
 			}
 			// TODO gitlab/bitbucket/any other git hoisting?
 
@@ -1379,6 +1395,7 @@ export async function activate(context: vscode.ExtensionContext) {
 					vscode.commands.executeCommand('revealInExplorer', location);
 				}
 			}
+
 		})();
 	}
 	//#endregion
