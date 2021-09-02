@@ -7,7 +7,6 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as http from 'http';
 import * as net from 'net';
-import * as os from 'os';
 import * as path from 'path';
 import * as url from 'url';
 import { RunOnceScheduler } from 'vs/base/common/async';
@@ -33,9 +32,7 @@ import { ConfigurationService } from 'vs/platform/configuration/common/configura
 import { ExtensionHostDebugBroadcastChannel } from 'vs/platform/debug/common/extensionHostDebugIpc';
 import { IDownloadService } from 'vs/platform/download/common/download';
 import { DownloadService } from 'vs/platform/download/common/downloadService';
-import { NativeParsedArgs } from 'vs/platform/environment/common/argv';
 import { IEnvironmentService, INativeEnvironmentService } from 'vs/platform/environment/common/environment';
-import { OptionDescriptions, OPTIONS, parseArgs } from 'vs/platform/environment/node/argv';
 import { NativeEnvironmentService } from 'vs/platform/environment/node/environmentService';
 import { ExtensionGalleryService } from 'vs/platform/extensionManagement/common/extensionGalleryService';
 import { IExtensionGalleryService, IExtensionManagementService } from 'vs/platform/extensionManagement/common/extensionManagement';
@@ -62,6 +59,7 @@ import { RequestChannel } from 'vs/platform/request/common/requestIpc';
 import { RequestService } from 'vs/platform/request/node/requestService';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { NullTelemetryService } from 'vs/platform/telemetry/common/telemetryUtils';
+import { args } from 'vs/server/node/args';
 import { IFileChangeDto } from 'vs/workbench/api/common/extHost.protocol';
 import { IExtHostReadyMessage, IExtHostSocketMessage } from 'vs/workbench/services/extensions/common/extensionHostProtocol';
 import { Logger } from 'vs/workbench/services/extensions/common/extensionPoints';
@@ -73,7 +71,7 @@ import { RemoteExtensionLogFileName } from 'vs/workbench/services/remote/common/
 export type IRawURITransformerFactory = (remoteAuthority: string) => IRawURITransformer;
 export const IRawURITransformerFactory = createDecorator<IRawURITransformerFactory>('rawURITransformerFactory');
 
-const APP_ROOT = path.join(__dirname, '..', '..', '..', '..');
+export const APP_ROOT = path.join(__dirname, '..', '..', '..', '..');
 const uriTransformerPath = path.join(APP_ROOT, 'out/serverUriTransformer');
 const rawURITransformerFactory: IRawURITransformerFactory = <any>require.__$__nodeRequire(uriTransformerPath);
 
@@ -169,12 +167,12 @@ function getMediaMime(forPath: string): string | undefined {
 	return mapExtToMediaMimes.get(ext.toLowerCase());
 }
 
-function serveError(req: http.IncomingMessage, res: http.ServerResponse, errorCode: number, errorMessage: string): void {
+export function serveError(req: http.IncomingMessage, res: http.ServerResponse, errorCode: number, errorMessage: string): void {
 	res.writeHead(errorCode, { 'Content-Type': 'text/plain' });
 	res.end(errorMessage);
 }
 
-async function serveFile(logService: ILogService, req: http.IncomingMessage, res: http.ServerResponse, filePath: string, responseHeaders: http.OutgoingHttpHeaders = {}) {
+export async function serveFile(logService: ILogService, req: http.IncomingMessage, res: http.ServerResponse, filePath: string, responseHeaders: http.OutgoingHttpHeaders = {}) {
 	try {
 
 		// Sanity checks
@@ -226,14 +224,6 @@ async function handleRoot(req: http.IncomingMessage, resp: http.ServerResponse, 
 	return resp.end(entryPointContent);
 }
 
-interface ServerParsedArgs extends NativeParsedArgs {
-	port?: string
-}
-const SERVER_OPTIONS: OptionDescriptions<Required<ServerParsedArgs>> = {
-	...OPTIONS,
-	port: { type: 'string' }
-};
-
 export interface IStartServerResult {
 	installingInitialExtensions?: Promise<void>
 }
@@ -249,6 +239,7 @@ export interface IServerOptions {
 	configureExtensionHostForkOptions?(opts: cp.ForkOptions, accessor: ServicesAccessor, channelServer: IPCServer<RemoteAgentConnectionContext>): void;
 	configureExtensionHostProcess?(extensionHost: cp.ChildProcess, accessor: ServicesAccessor, channelServer: IPCServer<RemoteAgentConnectionContext>): IDisposable;
 
+	verifyRequest?(req: http.IncomingMessage, res: http.ServerResponse | undefined, accessor: ServicesAccessor): Promise<boolean>;
 	handleRequest?(pathname: string | null, req: http.IncomingMessage, res: http.ServerResponse, accessor: ServicesAccessor, channelServer: IPCServer<RemoteAgentConnectionContext>): Promise<boolean>;
 }
 
@@ -256,10 +247,8 @@ export async function main(options: IServerOptions): Promise<void> {
 	const devMode = !!process.env['VSCODE_DEV'];
 	const connectionToken = generateUuid();
 
-	const parsedArgs = parseArgs(process.argv, SERVER_OPTIONS);
-	parsedArgs['user-data-dir'] = URI.file(path.join(os.homedir(), product.dataFolderName)).fsPath;
 	const productService = { _serviceBrand: undefined, ...product };
-	const environmentService = new NativeEnvironmentService(parsedArgs, productService);
+	const environmentService = new NativeEnvironmentService(args, productService);
 
 	// see src/vs/code/electron-main/main.ts#142
 	const bufferLogService = new BufferLogService();
@@ -593,10 +582,12 @@ export async function main(options: IServerOptions): Promise<void> {
 				const parsedUrl = url.parse(req.url, true);
 				const pathname = parsedUrl.pathname;
 
+				if (options.verifyRequest && !await instantiationService.invokeFunction(accessor => options.verifyRequest!(req, res, accessor))) {
+					return;
+				}
 				if (options.handleRequest && await instantiationService.invokeFunction(accessor => options.handleRequest!(pathname, req, res, accessor, channelServer))) {
 					return;
 				}
-
 				//#region headless
 				if (pathname === '/vscode-remote-resource') {
 					const filePath = parsedUrl.query['path'];
@@ -643,10 +634,14 @@ export async function main(options: IServerOptions): Promise<void> {
 			}
 		});
 		server.on('error', e => logService.error(e));
-		server.on('upgrade', (req: http.IncomingMessage, socket: net.Socket) => {
+		server.on('upgrade', async (req: http.IncomingMessage, socket: net.Socket) => {
 			if (req.headers['upgrade'] !== 'websocket' || !req.url) {
 				logService.error(`failed to upgrade for header "${req.headers['upgrade']}" and url: "${req.url}".`);
 				socket.end('HTTP/1.1 400 Bad Request');
+				return;
+			}
+			if (options.verifyRequest && !await instantiationService.invokeFunction(accessor => options.verifyRequest!(req, undefined, accessor))) {
+				socket.end('HTTP/1.1 401 Unauthorized');
 				return;
 			}
 			const { query } = url.parse(req.url, true);
@@ -758,7 +753,7 @@ export async function main(options: IServerOptions): Promise<void> {
 							logService.info(`[${token}] Management connection is connected.`);
 						} else {
 							if (!client.management) {
-								logService.error(`[${token}] Failed to reconnect: management connection is not running.`);
+								logService.error(`[${token}] Failed to reconnect: management connection is not running.`);
 								protocol.sendControl(VSBuffer.fromString(JSON.stringify({ type: 'error', reason: 'Management connection is not running.' } as ErrorMessage)));
 								safeDisposeProtocolAndSocket(protocol);
 								return;
@@ -848,17 +843,17 @@ export async function main(options: IServerOptions): Promise<void> {
 									socket.end();
 									extensionHost.kill();
 									client.extensionHost = undefined;
-									logService.info(`[${token}] Extension host is disconnected.`);
+									logService.info(`[${token}] Extension host is disconnected.`);
 								}
 
 								extensionHost.on('error', err => {
 									dispose();
-									logService.error(`[${token}] Extension host failed with: `, err);
+									logService.error(`[${token}] Extension host failed with: `, err);
 								});
 								extensionHost.on('exit', (code: number, signal: string) => {
 									dispose();
 									if (code !== 0 && signal !== 'SIGTERM') {
-										logService.error(`[${token}] Extension host exited with code: ${code} and signal: ${signal}.`);
+										logService.error(`[${token}] Extension host exited with code: ${code} and signal: ${signal}.`);
 									}
 								});
 
@@ -873,7 +868,7 @@ export async function main(options: IServerOptions): Promise<void> {
 											permessageDeflate,
 											inflateBytes
 										} as IExtHostSocketMessage, socket);
-										logService.info(`[${token}] Extension host is connected.`);
+										logService.info(`[${token}] Extension host is connected.`);
 									}
 								};
 								extensionHost.on('message', readyListener);
@@ -882,13 +877,13 @@ export async function main(options: IServerOptions): Promise<void> {
 									toDispose = instantiationService.invokeFunction(accessor => options.configureExtensionHostProcess!(extensionHost, accessor, channelServer));
 								}
 								client.extensionHost = extensionHost;
-								logService.info(`[${token}] Extension host is started.`);
+								logService.info(`[${token}] Extension host is started.`);
 							} catch (e) {
-								logService.error(`[${token}] Failed to start the extension host process: `, e);
+								logService.error(`[${token}] Failed to start the extension host process: `, e);
 							}
 						} else {
 							if (!client.extensionHost) {
-								logService.error(`[${token}] Failed to reconnect: extension host is not running.`);
+								logService.error(`[${token}] Failed to reconnect: extension host is not running.`);
 								protocol.sendControl(VSBuffer.fromString(JSON.stringify({ type: 'error', reason: 'Extension host is not running.' } as ErrorMessage)));
 								safeDisposeProtocolAndSocket(protocol);
 								return;
@@ -908,7 +903,7 @@ export async function main(options: IServerOptions): Promise<void> {
 								permessageDeflate,
 								inflateBytes
 							} as IExtHostSocketMessage, socket);
-							logService.info(`[${token}] Extension host is reconnected.`);
+							logService.info(`[${token}] Extension host is reconnected.`);
 						}
 					} else {
 						logService.error(`[${token}] Unexpected connection type:`, msg.desiredConnectionType);
@@ -921,8 +916,8 @@ export async function main(options: IServerOptions): Promise<void> {
 			});
 		});
 		let port = 3000;
-		if (parsedArgs.port) {
-			port = Number(parsedArgs.port);
+		if (args.port) {
+			port = Number(args.port);
 		} else if (typeof options.port === 'number') {
 			port = options.port;
 		}

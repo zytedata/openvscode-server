@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>vscode-web-server login</title>
+		<style>
+			form {
+				position: absolute;
+				left: 50%;
+				top: 50%;
+				-webkit-transform: translate(-50%, -50%);
+				transform: translate(-50%, -50%);
+			}
+			.text {
+				max-width: 400px;
+			}
+			.password {
+				width: 300px;
+			}
+		</style>
+	</head>
+	<body>
+		<form action="/" method="post">
+			<input style="display: none;" type="text" autocomplete="username" />
+			<p class="text">Please login with your password. If you haven't set one yourself, you can find it in the server logs.</p>
+			<div class="field">
+				<input class="password" required autofocus type="password" placeholder="Enter password..." name="password" autocomplete="current-password" />
+				<input value="Login" type="submit" />
+			</div>
+		</form>
+	</body>
+</html>
