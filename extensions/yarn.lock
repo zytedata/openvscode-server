@@ -29,6 +29,28 @@
     vscode-ws-jsonrpc "^0.2.0"
     ws "^7.4.6"
 
+"@gitpod/gitpod-protocol@main":
+  version "0.1.5-main.1589"
+  resolved "https://registry.yarnpkg.com/@gitpod/gitpod-protocol/-/gitpod-protocol-0.1.5-main.1589.tgz#03dd3752187f9cdebdd08a251cb955cc867be22f"
+  integrity sha512-grniubcB09B7KoXOdRoD3xYhGj1+tmD534XRjDDMC04ICbdiCAM/b/pXKpTJW5ZcLLOqnNZanYOmIfZWPvhpZA==
+  dependencies:
+    ajv "^6.5.4"
+    analytics-node "^4.0.1"
+    inversify "^5.0.1"
+    jaeger-client "3.17.2"
+    js-yaml "^3.10.0"
+    opentracing "^0.14.4"
+    prom-client "^13.2.0"
+    random-number-csprng "^1.0.2"
+    reconnecting-websocket "^4.4.0"
+    reflect-metadata "^0.1.10"
+    uuid "^3.3.3"
+    vscode-jsonrpc "^5.0.1"
+    vscode-languageserver-protocol "3.15.3"
+    vscode-uri "^1.0.1"
+    vscode-ws-jsonrpc "^0.2.0"
+    ws "^7.4.6"
+
 "@gitpod/local-app-api-grpcweb@main":
   version "0.1.5-main.1291"
   resolved "https://registry.yarnpkg.com/@gitpod/local-app-api-grpcweb/-/local-app-api-grpcweb-0.1.5-main.1291.tgz#0ad3b11c38b7db7f026188817d24cbf02ac173f6"
@@ -422,6 +444,11 @@ crypt@0.0.2:
   version "0.0.2"
   resolved "https://registry.yarnpkg.com/crypt/-/crypt-0.0.2.tgz#88d7ff7ec0dfb86f713dc87bbb42d044d3e6c41b"
   integrity sha1-iNf/fsDfuG9xPch7u0LQRNPmxBs=
+
+crypto-js@^3.1.9-1:
+  version "3.3.0"
+  resolved "https://registry.yarnpkg.com/crypto-js/-/crypto-js-3.3.0.tgz#846dd1cce2f68aacfa156c8578f926a609b7976b"
+  integrity sha512-DIT51nX0dCfKltpRiXV+/TVZq+Qq2NgF4644+K7Ttnla7zEzqc+kjJyiB96BHNyUTBxyjzRcZYpUdZa+QAqi6Q==
 
 cson-parser@^1.3.3:
   version "1.3.5"
