@@ -16,7 +16,7 @@ import { ConsoleLogger, listen as doListen } from 'vscode-ws-jsonrpc';
 
 import GitpodAuthSession from './sessionhandler';
 import fetch from 'node-fetch';
-import { URLSearchParams } from 'url';
+import { URL, URLSearchParams } from 'url';
 
 export const authCompletePath = '/auth-complete';
 const getBaseURL = () => vscode.workspace.getConfiguration('gitpod').get('authOrigin', 'https://gitpod.io');
@@ -240,20 +240,20 @@ export async function setSettingsSync(enabled?: boolean): Promise<void> {
 async function createApiWebSocket(accessToken: string): Promise<{ gitpodService: GitpodConnection; pendignWebSocket: Promise<ReconnectingWebSocket>; }> {
 	const factory = new JsonRpcProxyFactory<GitpodServer>();
 	const gitpodService: GitpodConnection = new GitpodServiceImpl<GitpodClient, GitpodServer>(factory.createProxy()) as any;
+	console.log(`Using token: ${accessToken}`);
 	const pendignWebSocket = (async () => {
 		class GitpodServerWebSocket extends WebSocket {
 			constructor(address: string, protocols?: string | string[]) {
 				super(address, protocols, {
 					headers: {
-						'Origin': getBaseURL(),
+						'Origin': new URL(getBaseURL()).origin,
 						'Authorization': `Bearer ${accessToken}`
 					}
 				});
 			}
 		}
 		const webSocketMaxRetries = 3;
-		console.log(`Endpoint: ${getBaseURL().replace('https', 'wss')}`);
-		const webSocket = new ReconnectingWebSocket(getBaseURL().replace('https', 'wss'), undefined, {
+		const webSocket = new ReconnectingWebSocket(`${getBaseURL().replace('https', 'wss')}/api/v1`, undefined, {
 			minReconnectionDelay: 1000,
 			connectionTimeout: 10000,
 			maxRetries: webSocketMaxRetries - 1,
@@ -310,11 +310,12 @@ export async function resolveAuthenticationSession(scopes: readonly string[], co
 		});
 
 		if (!exchangeTokenResponse.ok) {
-			vscode.window.showErrorMessage(`Couldn't connect: ${exchangeTokenResponse.statusText}, ${await exchangeTokenResponse.text()}`);
+			vscode.window.showErrorMessage(`Couldn't connect (token exchange): ${exchangeTokenResponse.statusText}, ${await exchangeTokenResponse.text()}`);
 			return null;
 		}
 
 		const exchangeTokenData: ExchangeTokenResponse = await exchangeTokenResponse.json();
+		console.log(exchangeTokenData);
 		const access_token = exchangeTokenData.access_token;
 
 		console.log(access_token);
