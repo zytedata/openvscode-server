@@ -136,7 +136,7 @@ const newConfig = {
 	canSwitch: true,
 	authenticationProviders: {
 		gitpod: {
-			scopes: [...gitpodScopes]
+			scopes: ['function:accessCodeSyncStorage']
 		}
 	}
 };
@@ -316,11 +316,10 @@ export async function resolveAuthenticationSession(scopes: readonly string[], co
 
 		const exchangeTokenData: ExchangeTokenResponse = await exchangeTokenResponse.json();
 		console.log(exchangeTokenData);
-		const access_token = exchangeTokenData.access_token;
+		const jwtToken = exchangeTokenData.access_token;
+		const accessToken = JSON.parse(Buffer.from(jwtToken.split('.')[1], 'base64').toString())['jti'];
 
-		console.log(access_token);
-
-		const { gitpodService, pendignWebSocket } = await createApiWebSocket(access_token);
+		const { gitpodService, pendignWebSocket } = await createApiWebSocket(accessToken);
 		const user = await gitpodService.server.getLoggedInUser();
 		(await pendignWebSocket).close();
 		return {
@@ -329,8 +328,8 @@ export async function resolveAuthenticationSession(scopes: readonly string[], co
 				label: user.name!,
 				id: user.id
 			},
-			scopes: scopes,
-			accessToken: access_token
+			scopes,
+			accessToken
 		};
 	} catch (e) {
 		vscode.window.showErrorMessage(`Couldn't connect: ${e}`);
@@ -405,8 +404,8 @@ async function askToEnable(context: vscode.ExtensionContext): Promise<void> {
  */
 export async function createSession(scopes: readonly string[], context: vscode.ExtensionContext): Promise<vscode.AuthenticationSession> {
 	const callbackUri = await vscode.env.asExternalUri(vscode.Uri.parse(`${vscode.env.uriScheme}://gitpod.gitpod-desktop/complete-gitpod-auth`));
-	if (![...gitpodScopes].every((scope) => scopes.includes(scope))) {
-		vscode.window.showErrorMessage('The provided scopes are not enough to turn on Settings Sync');
+	if (scopes.some(scope => !gitpodScopes.has(scope))) {
+		throw new Error('invalid scopes');
 	}
 
 	const gitpodAuth = await createOauth2URL(context, {
