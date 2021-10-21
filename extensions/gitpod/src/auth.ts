@@ -141,55 +141,44 @@ const newConfig = {
 	}
 };
 
-/**
- * Returns a promise which waits until the secret store `gitpod.authSessions` item changes.
- * @returns a promise that resolves with newest added `vscode.AuthenticationSession`, or if no session is found, `null`
- */
-async function waitForAuthenticationSession(context: vscode.ExtensionContext): Promise<vscode.AuthenticationSession | null> {
-	console.log('Waiting for the onchange event');
-
+async function waitForAuthenticationSession(context: vscode.ExtensionContext): Promise<vscode.AuthenticationSession> {
 	// Wait until a session is added to the context's secret store
-	const authPromise = promiseFromEvent(context.secrets.onDidChange, (changeEvent: vscode.SecretStorageChangeEvent, resolve): void => {
+	await promiseFromEvent(context.secrets.onDidChange, (changeEvent: vscode.SecretStorageChangeEvent, resolve): void => {
 		if (changeEvent.key === 'gitpod.authSessions') {
 			resolve(changeEvent.key);
 		}
-	});
-	const data: any = await authPromise.promise;
+	}).promise;
 
-	console.log(data);
-
-	console.log('Retrieving the session');
-
-	const currentSessions = await getValidSessions(context);
-	if (currentSessions.length > 0) {
-		return currentSessions[currentSessions.length - 1];
-	} else {
-		vscode.window.showErrorMessage('Couldn\'t find any auth sessions');
-		return null;
+	const currentSessions = await readSessions(context);
+	if (!currentSessions.length) {
+		throw new Error('Not found');
 	}
+	return currentSessions[currentSessions.length - 1];
 }
 
-/**
- * Checks all stored auth sessions and returns all valid ones
- * @param context the VS Code extension context from which to get the sessions from
- * @param scopes optionally, you can specify scopes to check against
- * @returns a list of sessions that are valid
- */
-export async function getValidSessions(context: vscode.ExtensionContext, scopes?: readonly string[]): Promise<vscode.AuthenticationSession[]> {
-	const sessions = await getAuthSessions(context);
-
-	for (const [index, session] of sessions.entries()) {
-		const availableScopes = await checkScopes(session.accessToken);
-		if (!(scopes || [...gitpodScopes]).every((scope) => availableScopes.includes(scope))) {
-			delete sessions[index];
-		}
-	}
-
+export async function readSessions(context: vscode.ExtensionContext): Promise<vscode.AuthenticationSession[]> {
+	let sessions = await getAuthSessions(context);
+	sessions = sessions.filter(session => validateSession(session));
 	await storeAuthSessions(sessions, context);
-	if (sessions.length === 0 && (await getAuthSessions(context)).length !== 0) {
-		vscode.window.showErrorMessage('Your login session with Gitpod has expired. You need to sign in again.');
-	}
 	return sessions;
+}
+
+export async function validateSession(session: vscode.AuthenticationSession): Promise<boolean> {
+	try {
+		const hash = crypto.createHash('sha256').update(session.accessToken, 'utf8').digest('hex');
+		const tokenScopes = new Set(await withServerApi(session.accessToken, service => service.server.getGitpodTokenScopes(hash)));
+		for (const scope of gitpodScopes) {
+			if (!tokenScopes.has(scope)) {
+				return false;
+			}
+		}
+		return true;
+	} catch (e) {
+		if (e.message !== unauthorizedErr) {
+			console.error('gitpod: invalid session:', e);
+		}
+		return false;
+	}
 }
 
 /**
@@ -232,16 +221,23 @@ export async function setSettingsSync(enabled?: boolean): Promise<void> {
 	}
 }
 
-/**
- * Creates a WebSocket connection to Gitpod's API
- * @param accessToken an access token to create the WS connection with
- * @returns a tuple of `gitpodService` and `pendignWebSocket`
- */
-async function createApiWebSocket(accessToken: string): Promise<{ gitpodService: GitpodConnection; pendignWebSocket: Promise<ReconnectingWebSocket>; }> {
-	const factory = new JsonRpcProxyFactory<GitpodServer>();
-	const gitpodService: GitpodConnection = new GitpodServiceImpl<GitpodClient, GitpodServer>(factory.createProxy()) as any;
-	console.log(`Using token: ${accessToken}`);
-	const pendignWebSocket = (async () => {
+class GitpodServerApi extends vscode.Disposable {
+
+	readonly service: GitpodConnection;
+	private readonly socket: ReconnectingWebSocket;
+	private readonly onWillCloseEmitter = new vscode.EventEmitter<number | undefined>();
+	readonly onWillClose = this.onWillCloseEmitter.event;
+
+	constructor(accessToken: string) {
+		super(() => {
+			this.close();
+			this.onWillCloseEmitter.dispose();
+		});
+		const factory = new JsonRpcProxyFactory<GitpodServer>();
+		this.service = new GitpodServiceImpl<GitpodClient, GitpodServer>(factory.createProxy());
+
+		let retry = 1;
+		const maxRetries = 3;
 		class GitpodServerWebSocket extends WebSocket {
 			constructor(address: string, protocols?: string | string[]) {
 				super(address, protocols, {
@@ -250,35 +246,63 @@ async function createApiWebSocket(accessToken: string): Promise<{ gitpodService:
 						'Authorization': `Bearer ${accessToken}`
 					}
 				});
+				this.on('unexpected-response', (_, resp) => {
+					this.terminate();
+
+					// if mal-formed handshake request (unauthorized, forbidden) or client actions (redirect) are required then fail immediately
+					// otherwise try several times and fail, maybe temporarily unavailable, like server restart
+					if (retry++ >= maxRetries || (typeof resp.statusCode === 'number' && 300 <= resp.statusCode && resp.statusCode < 500)) {
+						socket.close(resp.statusCode);
+					}
+				});
 			}
 		}
-		const webSocketMaxRetries = 3;
-		const webSocket = new ReconnectingWebSocket(`${getBaseURL().replace('https', 'wss')}/api/v1`, undefined, {
+		const socket = new ReconnectingWebSocket(`${getBaseURL().replace('https', 'wss')}/api/v1`, undefined, {
+			maxReconnectionDelay: 10000,
 			minReconnectionDelay: 1000,
+			reconnectionDelayGrowFactor: 1.5,
 			connectionTimeout: 10000,
-			maxRetries: webSocketMaxRetries - 1,
+			maxRetries: Infinity,
 			debug: false,
 			startClosed: false,
 			WebSocket: GitpodServerWebSocket
 		});
-
-		let retry = 1;
-		webSocket.onerror = (err) => {
-			vscode.window.showErrorMessage(`WebSocket error: ${err.message} (#${retry}/${webSocketMaxRetries})`);
-			if (retry++ === webSocketMaxRetries) {
-				throw new Error('Maximum websocket connection retries exceeded');
-			}
+		socket.onerror = e => {
+			console.error('gitpod: server api: failed to open socket:', e);
 		};
 
 		doListen({
-			webSocket,
+			webSocket: socket,
 			logger: new ConsoleLogger(),
 			onConnection: connection => factory.listen(connection),
 		});
-		return webSocket;
-	})();
+		this.socket = socket;
+	}
 
-	return { gitpodService, pendignWebSocket };
+	private close(statusCode?: number): void {
+		this.onWillCloseEmitter.fire(statusCode);
+		try {
+			this.socket.close();
+		} catch (e) {
+			console.error('gitpod: server api: failed to close socket:', e);
+		}
+	}
+
+}
+
+const unauthorizedErr = 'unauthorized';
+function withServerApi<T>(accessToken: string, cb: (service: GitpodConnection) => Promise<T>): Promise<T> {
+	const api = new GitpodServerApi(accessToken);
+	return Promise.race([
+		cb(api.service),
+		new Promise<T>((_, reject) => api.onWillClose(statusCode => {
+			if (statusCode === 401) {
+				reject(new Error(unauthorizedErr));
+			} else {
+				reject(new Error('closed'));
+			}
+		}))
+	]).finally(() => api.dispose());
 }
 
 interface ExchangeTokenResponse {
@@ -315,13 +339,10 @@ export async function resolveAuthenticationSession(scopes: readonly string[], co
 		}
 
 		const exchangeTokenData: ExchangeTokenResponse = await exchangeTokenResponse.json();
-		console.log(exchangeTokenData);
 		const jwtToken = exchangeTokenData.access_token;
 		const accessToken = JSON.parse(Buffer.from(jwtToken.split('.')[1], 'base64').toString())['jti'];
 
-		const { gitpodService, pendignWebSocket } = await createApiWebSocket(accessToken);
-		const user = await gitpodService.server.getLoggedInUser();
-		(await pendignWebSocket).close();
+		const user = await withServerApi(accessToken, service => service.server.getLoggedInUser());
 		return {
 			id: 'gitpod.user',
 			account: {
@@ -338,30 +359,12 @@ export async function resolveAuthenticationSession(scopes: readonly string[], co
 }
 
 /**
- * @returns all of the scopes accessible for `accessToken`
- */
-export async function checkScopes(accessToken: string): Promise<string[]> {
-	try {
-		const { gitpodService, pendignWebSocket } = await createApiWebSocket(accessToken);
-		const hash = crypto.createHash('sha256').update(accessToken, 'utf8').digest('hex');
-		const scopes = await gitpodService.server.getGitpodTokenScopes(hash);
-		(await pendignWebSocket).close();
-		return scopes;
-	} catch (e) {
-		vscode.window.showErrorMessage(`Couldn't connect: ${e}`);
-		return [];
-	}
-}
-
-/**
  * Creates a URL to be opened for the whole OAuth2 flow to kick-off
  * @returns a `URL` string containing the whole auth URL
  */
 async function createOauth2URL(context: vscode.ExtensionContext, options: { authorizationURI: string, clientID: string, redirectURI: vscode.Uri, scopes: string[] }): Promise<string> {
 	const { authorizationURI, clientID, redirectURI, scopes } = options;
 	const { codeChallenge, codeVerifier }: { codeChallenge: string, codeVerifier: string } = create();
-
-	console.log(`Verifier: ${codeVerifier}`);
 
 	let query = '';
 	function set(field: string, value: string): void {
@@ -403,10 +406,11 @@ async function askToEnable(context: vscode.ExtensionContext): Promise<void> {
  * @returns a promise which resolves to an `AuthenticationSession`
  */
 export async function createSession(scopes: readonly string[], context: vscode.ExtensionContext): Promise<vscode.AuthenticationSession> {
-	const callbackUri = await vscode.env.asExternalUri(vscode.Uri.parse(`${vscode.env.uriScheme}://gitpod.gitpod-desktop/complete-gitpod-auth`));
 	if (scopes.some(scope => !gitpodScopes.has(scope))) {
-		throw new Error('invalid scopes');
+		throw new Error('Auth failed');
 	}
+
+	const callbackUri = await vscode.env.asExternalUri(vscode.Uri.parse(`${vscode.env.uriScheme}://gitpod.gitpod-desktop/complete-gitpod-auth`));
 
 	const gitpodAuth = await createOauth2URL(context, {
 		clientID: `${vscode.env.uriScheme}-gitpod`,
@@ -415,24 +419,18 @@ export async function createSession(scopes: readonly string[], context: vscode.E
 		scopes: [...gitpodScopes],
 	});
 
-	const timeoutPromise = new Promise((_: (value: vscode.AuthenticationSession) => void, reject): void => {
-		const wait = setTimeout(() => {
-			clearTimeout(wait);
-			vscode.window.showErrorMessage('Login timed out, please try to sign in again.');
-			reject('Login timed out.');
-		}, 1000 * 60 * 5); // 5 minutes
-	});
-	console.log(gitpodAuth);
 	const opened = await vscode.env.openExternal(gitpodAuth as any);
 	if (!opened) {
 		const selected = await vscode.window.showErrorMessage(`Couldn't open ${gitpodAuth} automatically, please copy and paste it to your browser manually.`, 'Copy', 'Cancel');
 		if (selected === 'Copy') {
 			vscode.env.clipboard.writeText(gitpodAuth);
-			console.log('Copied auth URL');
 		}
 	}
 
-	return Promise.race([timeoutPromise, (await waitForAuthenticationSession(context))!]);
+	return Promise.race([
+		waitForAuthenticationSession(context),
+		new Promise<vscode.AuthenticationSession>((_, reject) => setTimeout(() => reject(new Error('Login timed out.')), 1000 * 60 * 5))
+	]);
 }
 
 /**

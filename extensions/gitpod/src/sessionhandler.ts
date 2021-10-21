@@ -5,7 +5,7 @@
 /// <reference path='../../../src/vs/vscode.d.ts'/>
 
 import * as vscode from 'vscode';
-import { createSession, storeAuthSessions, getValidSessions } from './auth';
+import { createSession, storeAuthSessions, readSessions } from './auth';
 
 export default class GitpodAuthSession {
 	private _sessionChangeEmitter = new vscode.EventEmitter<vscode.AuthenticationProviderAuthenticationSessionsChangeEvent>();
@@ -54,8 +54,8 @@ export default class GitpodAuthSession {
 		}
 	}
 
-	async getSessions(scopes?: string[]): Promise<vscode.AuthenticationSession[]> {
-		return getValidSessions(this.context, scopes);
+	async getSessions(): Promise<vscode.AuthenticationSession[]> {
+		return readSessions(this.context);
 	}
 
 	public async readSessions(): Promise<vscode.AuthenticationSession[]> {
