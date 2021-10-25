@@ -242,7 +242,73 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 			]
 		}
 	},
-
+	{
+		id: 'gitpod-getstarted',
+		title: 'Get Started with Gitpod',
+		description: 'Explore what Gitpod is and how to get the most out of it.',
+		isFeatured: true,
+		icon: setupIcon,
+		when: 'isWeb',
+		content: {
+			type: 'steps',
+			steps: [
+				{
+					id: 'whatisgitpod',
+					title: 'What is Gitpod?',
+					description: '',
+					media: {
+						type: 'markdown',
+						path: 'what-is-gitpod.md'
+					}
+				},
+				{
+					id: 'prebuilds',
+					title: 'Prebuilds do the heavy lifting',
+					description: '',
+					media: {
+						type: 'markdown',
+						path: 'prebuilds.md'
+					}
+				},
+				{
+					id: 'workspaces',
+					title: 'A new workspace per task',
+					description: '',
+					media: {
+						type: 'markdown',
+						path: 'workspaces.md'
+					}
+				},
+				{
+					id: 'terminal',
+					title: 'Full access to a terminal',
+					description: '',
+					media: {
+						type: 'markdown',
+						path: 'terminal.md'
+					}
+				},
+				{
+					id: 'ports',
+					title: 'Open ports',
+					description: '',
+					media: {
+						type: 'markdown',
+						path: 'ports.md'
+					}
+				},
+				{
+					id: 'vscodedesktopsupport',
+					title: 'VS Code desktop support',
+					description: '',
+					media: {
+						type: 'markdown',
+						path: 'vscodedesktopsupport.md'
+					}
+				}
+			]
+		}
+	},
 	{
 		id: 'SetupWeb',
 		title: localize('gettingStarted.setupWeb.title', "Get Started with VS Code in the Web"),
