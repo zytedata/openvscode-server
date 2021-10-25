@@ -258,7 +258,7 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 					description: '',
 					media: {
 						type: 'markdown',
-						path: 'what-is-gitpod.md'
+						path: 'what-is-gitpod'
 					}
 				},
 				{
@@ -267,7 +267,7 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 					description: '',
 					media: {
 						type: 'markdown',
-						path: 'prebuilds.md'
+						path: 'prebuilds'
 					}
 				},
 				{
@@ -276,7 +276,7 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 					description: '',
 					media: {
 						type: 'markdown',
-						path: 'workspaces.md'
+						path: 'workspaces'
 					}
 				},
 				{
@@ -285,7 +285,7 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 					description: '',
 					media: {
 						type: 'markdown',
-						path: 'terminal.md'
+						path: 'terminal'
 					}
 				},
 				{
@@ -294,7 +294,7 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 					description: '',
 					media: {
 						type: 'markdown',
-						path: 'ports.md'
+						path: 'ports'
 					}
 				},
 				{
