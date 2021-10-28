@@ -122,4 +122,8 @@ export class RemoteExtensionEnvironmentChannelClient {
 	static flushTelemetry(channel: IChannel): Promise<void> {
 		return channel.call<void>('flushTelemetry');
 	}
+
+	static increaseExtensionsInstallCounter(channel: IChannel, source: string, status: 'ok' | string): Promise<void> {
+		return channel.call<void>('increaseExtensionsInstallCounter', { source, status });
+	}
 }

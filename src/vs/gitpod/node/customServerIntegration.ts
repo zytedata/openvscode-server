@@ -14,6 +14,9 @@ import { generateUuid } from 'vs/base/common/uuid';
 import { asText, IRequestService } from 'vs/platform/request/common/request';
 import { CancellationToken } from 'vs/base/common/cancellation';
 import { streamToBuffer } from 'vs/base/common/buffer';
+import * as metrics from 'vs/gitpod/node/prometheusMetrics';
+import { IExtensionGalleryService, IExtensionManagementService } from 'vs/platform/extensionManagement/common/extensionManagement';
+import { ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
 
 const devMode = !!process.env['VSCODE_DEV'];
 const supervisorAddr = process.env.SUPERVISOR_ADDR || 'localhost:22999';
@@ -51,7 +54,11 @@ function setActiveCliIpcHook(cliIpcHook: string): void {
 	didChangeActiveCliIpcHookEmitter.fire();
 }
 
-export function handleGitpodCLIRequest(pathname: string, req: http.IncomingMessage, res: http.ServerResponse) {
+export function handleGitpodRequests(logService: ILogService, pathname: string, req: http.IncomingMessage, res: http.ServerResponse): boolean {
+	if (pathname === '/__gitpod/metrics') {
+		metrics.serve(logService, res);
+		return true;
+	}
 	if (pathname === '/cli') {
 		if (req.method === 'GET') {
 			res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -200,4 +207,61 @@ export async function getInitialExtensionsToInstall(logService: ILogService, req
 	const extIds = await pendingExtensions();
 
 	return [...vsixPaths, ...extIds];
+}
+
+export function instrumentExtensionsMetrics(accessor: ServicesAccessor): void {
+	const extensionManagementService = accessor.get(IExtensionManagementService);
+
+	const install = extensionManagementService.install.bind(extensionManagementService);
+	extensionManagementService.install = async (vsix, options) => {
+		const source = 'RemoteExtensionManagementService.install';
+		try {
+			const result = await install(vsix, options);
+			metrics.increaseExtensionsInstallCounter(source, 'ok');
+			return result;
+		} catch (e) {
+			metrics.increaseExtensionsInstallCounter(source, e.message);
+			throw e;
+		}
+	};
+
+	const installFromGallery = extensionManagementService.installFromGallery.bind(extensionManagementService);
+	extensionManagementService.installFromGallery = async (extension, options) => {
+		const source = 'RemoteExtensionManagementService.installFromGallery';
+		try {
+			const result = await installFromGallery(extension, options);
+			metrics.increaseExtensionsInstallCounter(source, 'ok');
+			return result;
+		} catch (e) {
+			metrics.increaseExtensionsInstallCounter(source, e.message);
+			throw e;
+		}
+	};
+
+	const extensionGalleryService = accessor.get(IExtensionGalleryService);
+	const getExtensions = extensionGalleryService.getExtensions.bind(extensionGalleryService);
+	extensionGalleryService.getExtensions = async (identifiers, token) => {
+		const source = 'RemoteExtensionGalleryService.getExtensions';
+		try {
+			const result = await getExtensions(identifiers, token);
+			metrics.increaseExtensionsInstallCounter(source, 'ok');
+			return result;
+		} catch (e) {
+			metrics.increaseExtensionsInstallCounter(source, e.message);
+			throw e;
+		}
+	};
+
+	const getManifest = extensionGalleryService.getManifest.bind(extensionGalleryService);
+	extensionGalleryService.getManifest = async (extension, token) => {
+		const source = 'RemoteExtensionGalleryService.getManifest';
+		try {
+			const result = await getManifest(extension, token);
+			metrics.increaseExtensionsInstallCounter(source, 'ok');
+			return result;
+		} catch (e) {
+			metrics.increaseExtensionsInstallCounter(source, e.message);
+			throw e;
+		}
+	};
 }

@@ -77,7 +77,7 @@ import { SpdLogLogger } from 'vs/platform/log/node/spdlogLog';
 import { IPtyService, TerminalSettingId } from 'vs/platform/terminal/common/terminal';
 import { PtyHostService } from 'vs/platform/terminal/node/ptyHostService';
 import { IRemoteTelemetryService, RemoteNullTelemetryService, RemoteTelemetryService } from 'vs/server/remoteTelemetryService';
-import { handleGitpodCLIRequest } from 'vs/gitpod/node/customServerIntegration';
+import { handleGitpodRequests, instrumentExtensionsMetrics } from 'vs/gitpod/node/customServerIntegration';
 
 const SHUTDOWN_TIMEOUT = 5 * 60 * 1000;
 
@@ -324,6 +324,8 @@ export class RemoteExtensionHostAgentServer extends Disposable {
 		services.set(IPtyService, ptyService);
 
 		return instantiationService.invokeFunction(accessor => {
+			instrumentExtensionsMetrics(accessor);
+
 			const remoteExtensionEnvironmentChannel = new RemoteAgentEnvironmentChannel(this._connectionToken, this._environmentService, extensionManagementCLIService, this._logService, accessor.get(IRemoteTelemetryService), appInsightsAppender, this._productService, accessor.get(IRequestService));
 			this._socketServer.registerChannel('remoteextensionsenvironment', remoteExtensionEnvironmentChannel);
 
@@ -373,7 +375,7 @@ export class RemoteExtensionHostAgentServer extends Disposable {
 			return serveError(req, res, 400, `Bad request.`);
 		}
 
-		if (handleGitpodCLIRequest(pathname, req, res)) {
+		if (handleGitpodRequests(this._logService, pathname, req, res)) {
 			return;
 		}
 

@@ -834,6 +834,7 @@
 					"**/vs/platform/**/{common,node}/**",
 					"**/vs/workbench/**/{common,node}/**",
 					"**/vs/server/**",
+					"**/vs/gitpod/node/**",
 					"@vscode/*", "@parcel/*", "*" // node modules
 				]
 			},
@@ -1075,7 +1076,7 @@
 		{
 			"files": [
 				"build/gulpfile.gitpod.js",
-				"src/vs/gitpod/*",
+				"src/vs/gitpod/**/*",
 				"extensions/gitpod*/**/*"
 			],
 			"rules": {

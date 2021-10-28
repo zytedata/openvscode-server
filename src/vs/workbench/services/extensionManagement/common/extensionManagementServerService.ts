@@ -45,6 +45,34 @@ export class ExtensionManagementServerService implements IExtensionManagementSer
 				extensionManagementService,
 				label: localize('browser', "Browser"),
 			};
+			//#region instrument gitpod metrics
+			const install = extensionManagementService.install.bind(extensionManagementService);
+			extensionManagementService.install = async (location, options) => {
+				const source = 'WebExtensionManagementService.install';
+				try {
+					const result = await install(location, options);
+					remoteAgentService.increaseExtensionsInstallCounter(source, 'ok');
+					return result;
+				} catch (e) {
+					remoteAgentService.increaseExtensionsInstallCounter(source, e.message);
+					throw e;
+				}
+			};
+
+
+			const installFromGallery = extensionManagementService.installFromGallery.bind(extensionManagementService);
+			extensionManagementService.installFromGallery = async (extension, options) => {
+				const source = 'WebExtensionManagementService.installFromGallery';
+				try {
+					const result = await installFromGallery(extension, options);
+					remoteAgentService.increaseExtensionsInstallCounter(source, 'ok');
+					return result;
+				} catch (e) {
+					remoteAgentService.increaseExtensionsInstallCounter(source, e.message);
+					throw e;
+				}
+			};
+			//#endregion
 		}
 	}
 

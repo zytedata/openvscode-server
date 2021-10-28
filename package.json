@@ -78,6 +78,7 @@
     "native-keymap": "3.0.0",
     "native-watchdog": "1.3.0",
     "node-pty": "0.11.0-beta7",
+    "prom-client": "^14.0.0",
     "spdlog": "^0.13.0",
     "sudo-prompt": "9.2.1",
     "tas-client-umd": "0.1.4",

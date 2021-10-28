@@ -45,6 +45,7 @@ export interface IRemoteAgentService {
 	disableTelemetry(): Promise<void>;
 	logTelemetry(eventName: string, data?: ITelemetryData): Promise<void>;
 	flushTelemetry(): Promise<void>;
+	increaseExtensionsInstallCounter(source: string, status: 'ok' | string): Promise<void>;
 }
 
 export interface IRemoteAgentConnection {

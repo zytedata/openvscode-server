@@ -34,6 +34,7 @@ import { Promises } from 'vs/base/node/pfs';
 import { IProductService } from 'vs/platform/product/common/productService';
 import { IRequestService } from 'vs/platform/request/common/request';
 import { getInitialExtensionsToInstall } from 'vs/gitpod/node/customServerIntegration';
+import * as metrics from 'vs/gitpod/node/prometheusMetrics';
 
 let _SystemExtensionsRoot: string | null = null;
 function getSystemExtensionsRoot(): string {
@@ -224,6 +225,11 @@ export class RemoteAgentEnvironmentChannel implements IServerChannel {
 				}
 
 				return Promise.resolve();
+			}
+
+			case 'increaseExtensionsInstallCounter': {
+				const { source, status } = arg;
+				metrics.increaseExtensionsInstallCounter(source, status);
 			}
 		}
 

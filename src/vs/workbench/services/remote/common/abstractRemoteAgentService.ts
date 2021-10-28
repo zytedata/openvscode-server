@@ -118,6 +118,13 @@ export abstract class AbstractRemoteAgentService extends Disposable implements I
 		);
 	}
 
+	increaseExtensionsInstallCounter(source: string, status: 'ok' | string): Promise<void> {
+		return this._withChannel(
+			channel => RemoteExtensionEnvironmentChannelClient.increaseExtensionsInstallCounter(channel, source, status),
+			undefined
+		);
+	}
+
 	private _withChannel<R>(callback: (channel: IChannel, connection: IRemoteAgentConnection) => Promise<R>, fallback: R): Promise<R> {
 		const connection = this.getConnection();
 		if (!connection) {

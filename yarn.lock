@@ -8356,6 +8356,13 @@ prom-client@^10.2.0:
   dependencies:
     tdigest "^0.1.1"
 
+prom-client@^14.0.0:
+  version "14.0.0"
+  resolved "https://registry.yarnpkg.com/prom-client/-/prom-client-14.0.0.tgz#7af5a0f8f544743f0dee4447c06ac9bb0d052719"
+  integrity sha512-etPa4SMO4j6qTn2uaSZy7+uahGK0kXUZwO7WhoDpTf3yZ837I3jqUDYmG6N0caxuU6cyqrg0xmOxh+yneczvyA==
+  dependencies:
+    tdigest "^0.1.1"
+
 promise-inflight@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/promise-inflight/-/promise-inflight-1.0.1.tgz#98472870bf228132fcbdd868129bad12c3c029e3"

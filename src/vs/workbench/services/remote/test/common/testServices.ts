@@ -46,5 +46,8 @@ export class TestRemoteAgentService implements IRemoteAgentService {
 	flushTelemetry(): Promise<void> {
 		throw new Error('Method not implemented.');
 	}
+	increaseExtensionsInstallCounter(): Promise<void> {
+		throw new Error('Method not implemented.');
+	}
 
 }
