@@ -299,7 +299,6 @@ export class GitpodWorkspacePort extends vscode.TreeItem {
 	async setTunnelVisibility(visibility: TunnelVisiblity): Promise<void> {
 		const request = new TunnelPortRequest();
 		request.setPort(this.portNumber);
-		request.setTargetPort(this.portNumber);
 		request.setVisibility(visibility);
 		await util.promisify(this.context.supervisor.port.tunnel.bind(this.context.supervisor.port, request, this.context.supervisor.metadata, {
 			deadline: Date.now() + this.context.supervisor.deadlines.normal
@@ -539,7 +538,6 @@ export function registerPorts(context: GitpodExtensionContext): void {
 					});
 					const request = new ExposePortRequest();
 					request.setPort(portNumber);
-					request.setTargetPort(portNumber);
 					await util.promisify(context.supervisor.control.exposePort.bind(context.supervisor.control, request, context.supervisor.metadata, {
 						deadline: Date.now() + context.supervisor.deadlines.normal
 					}))();
@@ -708,7 +706,6 @@ export function registerPorts(context: GitpodExtensionContext): void {
 	context.subscriptions.push(vscode.commands.registerCommand('gitpod.api.openTunnel', async (tunnelOptions: vscode.TunnelOptions, _tunnelCreationOptions: vscode.TunnelCreationOptions) => {
 		const request = new TunnelPortRequest();
 		request.setPort(tunnelOptions.remoteAddress.port);
-		request.setTargetPort(tunnelOptions.localAddressPort || tunnelOptions.remoteAddress.port);
 		request.setVisibility(!!tunnelOptions?.public ? TunnelVisiblity.NETWORK : TunnelVisiblity.HOST);
 		await util.promisify(context.supervisor.port.tunnel.bind(context.supervisor.port, request, context.supervisor.metadata, {
 			deadline: Date.now() + context.supervisor.deadlines.normal
