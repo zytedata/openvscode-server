@@ -147,7 +147,7 @@ function packageTask(sourceFolderName, destinationFolderName) {
 		const extensions = gulp.src('.build/web/extensions/**', { base: '.build/web', dot: true });
 
 		const sources = es.merge(src, extensions)
-			.pipe(filter(['**', '!**/*.js.map'], { dot: true }));
+			.pipe(filter(['**'], { dot: true }));
 
 		const name = product.nameShort;
 		const packageJsonStream = gulp.src(['remote/web/package.json'], { base: 'remote/web' })
