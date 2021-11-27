@@ -14,7 +14,6 @@ import { generateUuid } from 'vs/base/common/uuid';
 import { request } from 'vs/base/parts/request/browser/request';
 import { localize } from 'vs/nls';
 import { parseLogLevel } from 'vs/platform/log/common/log';
-import { defaultWebSocketFactory } from 'vs/platform/remote/browser/browserSocketFactory';
 import { isFolderToOpen, isWorkspaceToOpen } from 'vs/platform/windows/common/windows';
 import { create, Disposable, ICredentialsProvider, IHomeIndicator, IProductQualityChangeHandler, IURLCallbackProvider, IWindowIndicator, IWorkbenchConstructionOptions, IWorkspace, IWorkspaceProvider } from 'vs/workbench/workbench.web.api';
 
@@ -490,13 +489,6 @@ class WindowIndicator implements IWindowIndicator {
 		webviewEndpoint: webviewEndpoint.href,
 		webWorkerExtensionHostIframeSrc: webWorkerExtensionEndpoint.href,
 		remoteAuthority,
-		webSocketFactory: {
-			create: url => {
-				const codeServerUrl = new URL(url);
-				codeServerUrl.protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-				return defaultWebSocketFactory.create(codeServerUrl.toString());
-			}
-		},
 		resourceUriProvider: uri => {
 			const connectionToken = RemoteAuthorities['_connectionTokens'][remoteAuthority];
 			let query = `path=${encodeURIComponent(uri.path)}`;
