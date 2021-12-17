@@ -135,7 +135,7 @@ export async function setupServerServices(connectionToken: ServerConnectionToken
 		}
 
 
-		appInsightsAppender = new GitpodInsightsAppender();
+		appInsightsAppender = new GitpodInsightsAppender(productService.nameShort, productService.version);
 
 		// TODO: Duplicate
 		// const machineId = await getMachineId();
