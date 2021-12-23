@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IStorageService } from 'vs/platform/storage/common/storage';
+import { IStorageService, StorageScope } from 'vs/platform/storage/common/storage';
 import { AbstractExtensionsInitializer, IExtensionsInitializerPreviewResult } from 'vs/platform/userDataSync/common/extensionsSync';
 import { GlobalStateInitializer, UserDataSyncStoreTypeSynchronizer } from 'vs/platform/userDataSync/common/globalStateSync';
 import { KeybindingsInitializer } from 'vs/platform/userDataSync/common/keybindingsSync';
@@ -85,7 +85,6 @@ export class UserDataInitializationService implements IUserDataInitializationSer
 						return;
 					}
 
-					/*
 					if (!this.storageService.isNew(StorageScope.GLOBAL)) {
 						this.logService.trace(`Skipping initializing user data as application was opened before`);
 						return;
@@ -95,7 +94,6 @@ export class UserDataInitializationService implements IUserDataInitializationSer
 						this.logService.trace(`Skipping initializing user data as workspace was opened before`);
 						return;
 					}
-					*/
 
 					let authenticationSession;
 					try {
