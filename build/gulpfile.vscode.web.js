@@ -169,9 +169,9 @@ function packageTask(sourceFolderName, destinationFolderName) {
 
 		// TODO@bpasero remove me in Feb
 		const legacyMain = es.merge(
-			gulp.src(sourceFolderName + '/vs/workbench/workbench.web.main.js').pipe(rename('out/vs/workbench/workbench.web.api.js')).pipe(replace('workbench.web.main', 'workbench.web.api')),
-			gulp.src(sourceFolderName + '/vs/workbench/workbench.web.main.css').pipe(rename('out/vs/workbench/workbench.web.api.css')),
-			gulp.src(sourceFolderName + '/vs/workbench/workbench.web.main.nls.js').pipe(rename('out/vs/workbench/workbench.web.api.nls.js')).pipe(replace('workbench.web.main', 'workbench.web.api'))
+			gulp.src(sourceFolderName + '/vs/workbench/workbench.web.main.js').pipe(rename('out/vs/workbench/workbench.web.main.js')).pipe(replace('workbench.web.main', 'workbench.web.api')),
+			gulp.src(sourceFolderName + '/vs/workbench/workbench.web.main.css').pipe(rename('out/vs/workbench/workbench.web.main.css')),
+			gulp.src(sourceFolderName + '/vs/workbench/workbench.web.main.nls.js').pipe(rename('out/vs/workbench/workbench.web.main.nls.js')).pipe(replace('workbench.web.main', 'workbench.web.api'))
 		);
 
 		let all = es.merge(
