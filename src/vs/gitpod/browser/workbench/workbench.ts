@@ -569,8 +569,8 @@ async function doStart(): Promise<IDisposable> {
 	const remoteAuthority = window.location.host;
 
 	const wsHostPrefix = !devMode ? info.workspaceId : remoteAuthority.substr(0, remoteAuthority.indexOf('.'));
-	const webEndpointUrlTemplate = `https://extensions-foreign.${info.workspaceClusterHost}/${wsHostPrefix}/static`;
-	const webviewEndpoint = `https://{{uuid}}-webview-foreign.${info.workspaceClusterHost}/${wsHostPrefix}/static/out/vs/workbench/contrib/webview/browser/pre/`;
+	const webEndpointUrlTemplate = `https://{{uuid}}-foreign.${info.workspaceClusterHost}/${wsHostPrefix}/static`;
+	const webviewEndpoint = `https://{{uuid}}-foreign.${info.workspaceClusterHost}/${wsHostPrefix}/static/out/vs/workbench/contrib/webview/browser/pre/`;
 
 	const folderUri = info.workspaceLocationFolder
 		? URI.from({
