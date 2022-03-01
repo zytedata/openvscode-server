@@ -60,8 +60,8 @@
     "server:init": "yarn --cwd ./build compile && yarn compile && yarn download-builtin-extensions"
   },
   "dependencies": {
-    "@gitpod/local-app-api-grpcweb": "main",
     "@gitpod/gitpod-protocol": "main",
+    "@gitpod/local-app-api-grpcweb": "main",
     "@gitpod/supervisor-api-grpc": "main",
     "@microsoft/applicationinsights-web": "^2.6.4",
     "@parcel/watcher": "2.0.5",
@@ -75,7 +75,6 @@
     "graceful-fs": "4.2.8",
     "http-proxy-agent": "^2.1.0",
     "https-proxy-agent": "^2.2.3",
-    "js-yaml": "^3.10.0",
     "jschardet": "3.0.0",
     "keytar": "7.6.0",
     "minimist": "^1.2.5",
@@ -112,7 +111,6 @@
     "@types/gulp-postcss": "^8.0.0",
     "@types/gulp-svgmin": "^1.2.1",
     "@types/http-proxy-agent": "^2.0.1",
-    "@types/js-yaml": "^3.10.1",
     "@types/keytar": "^4.4.0",
     "@types/minimist": "^1.2.1",
     "@types/mocha": "^8.2.0",

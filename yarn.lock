@@ -1401,11 +1401,6 @@
   dependencies:
     "@types/istanbul-lib-report" "*"
 
-"@types/js-yaml@^3.10.1":
-  version "3.12.7"
-  resolved "https://registry.yarnpkg.com/@types/js-yaml/-/js-yaml-3.12.7.tgz#330c5d97a3500e9c903210d6e49f02964af04a0e"
-  integrity sha512-S6+8JAYTE1qdsc9HMVsfY7+SgSuUU/Tp6TYTmITW0PZxiyIMvol3Gy//y69Wkhs0ti4py5qgR3uZH6uz/DNzJQ==
-
 "@types/json-schema@*":
   version "7.0.7"
   resolved "https://registry.yarnpkg.com/@types/json-schema/-/json-schema-7.0.7.tgz#98a993516c859eb0d5c4c8f098317a9ea68db9ad"
@@ -1638,13 +1633,6 @@
   integrity sha512-T8Yc9wt/5LbJyCaLiHPReJa0kApcIgJ7Bn735GjItUfh08Z1pJvu8QZqb9s+mMvKV6WUQRV7K2R46YbjMXTTJw==
   dependencies:
     "@types/yargs-parser" "*"
-
-"@types/ws@^7.2.6":
-  version "7.4.7"
-  resolved "https://registry.yarnpkg.com/@types/ws/-/ws-7.4.7.tgz#f7c390a36f7a0679aa69de2d501319f4f8d9b702"
-  integrity sha512-JQbbmxZTZehdc2iszGKs5oC3NFnjeay7mtAWrdt7qNtAVK0g19muApzAy4bm9byz79xa2ZnO/BOBC2R8RC5Lww==
-  dependencies:
-    "@types/node" "*"
 
 "@types/yauzl@^2.9.1":
   version "2.9.1"
