@@ -39,7 +39,7 @@
     "onAuthenticationRequest:gitpod",
     "onAuthenticationRequest:github"
   ],
-  "browser": "./out/extensionWeb.js",
+  "browser": "./dist/web/extension.js",
   "scripts": {
     "vscode:prepublish": "yarn run compile --cwd .."
   }
