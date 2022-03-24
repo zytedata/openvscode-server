@@ -549,7 +549,7 @@ if (devMode) {
 }
 async function doStart(): Promise<IDisposable> {
 
-	const infoResponse = await fetch(window.location.protocol + '//' + supervisorHost + '/_supervisor/v1/status/ide', {
+	const infoResponse = await fetch(window.location.protocol + '//' + supervisorHost + '/_supervisor/v1/info/workspace', {
 		credentials: 'include'
 	});
 	if (!infoResponse.ok) {
