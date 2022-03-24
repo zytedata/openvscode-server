@@ -1094,6 +1094,9 @@ if (devMode) {
 			return _failureCause;
 		},
 		onDidChange: onDidChangeEmitter.event,
-		start: () => doStartWeb()
+		start: () => {
+			const workpaceReady = false;
+			return workpaceReady ? start() : doStartWeb();
+		}
 	};
 }
