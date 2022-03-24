@@ -1,0 +1,16 @@
+{
+	"extends": "../tsconfig.base.json",
+	"compilerOptions": {
+		"outDir": "./out",
+		"esModuleInterop": true,
+		"sourceMap": true,
+		"lib": [ "es2016", "WebWorker" ],
+	},
+	"include": [
+		"src/**/*",
+		"../../src/vscode-dts/vscode.d.ts",
+		"../../src/vscode-dts/vscode.proposed.fileSearchProvider.d.ts",
+		"../../src/vscode-dts/vscode.proposed.textSearchProvider.d.ts",
+		"../types/lib.textEncoder.d.ts"
+	]
+}

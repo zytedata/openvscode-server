@@ -1,0 +1,46 @@
+{
+  "name": "gitpod1s",
+  "displayName": "gitpod1s",
+  "description": "gitpod1s",
+  "publisher": "gitpod",
+  "version": "0.0.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gitpod-io/openvscode-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/gitpod-io/gitpod/issues"
+  },
+  "engines": {
+    "vscode": "^1.58.2"
+  },
+  "contributes": {
+    "viewsWelcome": [
+      {
+        "view": "debug",
+        "contents": "In order to run and debug you'll need to create a local workspace."
+      },
+      {
+        "view": "terminal",
+        "contents": "In order to run and debug you'll need to create a local workspace."
+      }
+    ]
+  },
+  "enabledApiProposals": [
+    "fileSearchProvider",
+    "textSearchProvider"
+  ],
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "*",
+    "onAuthenticationRequest:gitpod",
+    "onAuthenticationRequest:github"
+  ],
+  "browser": "./out/extensionWeb.js",
+  "scripts": {
+    "vscode:prepublish": "yarn run compile --cwd .."
+  }
+}

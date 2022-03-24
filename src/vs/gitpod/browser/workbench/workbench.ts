@@ -999,11 +999,92 @@ async function doStart(): Promise<IDisposable> {
 			getLoggedInUser
 		]
 	}));
+
+
+	return subscriptions;
+}
+
+function doStartWeb() {
+	const subscriptions = new DisposableStore();
+
+	subscriptions.add(create(document.body, {
+		workspaceProvider: WorkspaceProvider.create({ remoteAuthority: undefined, folderUri: URI.parse('memfs:///sample-folder') }),
+		windowIndicator: {
+			onDidChange: Event.None,
+			label: `$(gitpod) Gitpod`,
+			tooltip: 'Editing on Gitpod'
+		},
+		initialColorTheme: {
+			themeType: ColorScheme.LIGHT,
+			// should be aligned with extensions/theme-defaults/themes/gitpod-light-color-theme.json
+			colors: {
+				'statusBarItem.remoteBackground': '#FF8A00',
+				'statusBarItem.remoteForeground': '#f9f9f9',
+				'statusBar.background': '#F3F3F3',
+				'statusBar.foreground': '#292524',
+				'statusBar.noFolderBackground': '#FF8A00',
+				'statusBar.debuggingBackground': '#FF8A00',
+				'sideBar.background': '#fcfcfc',
+				'sideBarSectionHeader.background': '#f9f9f9',
+				'activityBar.background': '#f9f9f9',
+				'activityBar.foreground': '#292524',
+				'editor.background': '#ffffff',
+				'button.background': '#FF8A00',
+				'button.foreground': '#ffffff',
+				'list.activeSelectionBackground': '#e7e5e4',
+				'list.activeSelectionForeground': '#292524',
+				'list.inactiveSelectionForeground': '#292524',
+				'list.inactiveSelectionBackground': '#F9F9F9',
+				'minimap.background': '#FCFCFC',
+				'minimapSlider.activeBackground': '#F9F9F9',
+				'tab.inactiveBackground': '#F9F9F9',
+				'editor.selectionBackground': '#FFE4BC',
+				'editor.inactiveSelectionBackground': '#FFE4BC',
+				'textLink.foreground': '#ffb45b'
+			}
+		},
+		configurationDefaults: {
+			'workbench.colorTheme': 'Gitpod Light',
+			'workbench.preferredLightColorTheme': 'Gitpod Light',
+			'workbench.preferredDarkColorTheme': 'Gitpod Dark',
+		},
+		urlCallbackProvider: new LocalStorageURLCallbackProvider(),
+		productConfiguration: {
+			nameShort: product.nameShort,
+			nameLong: product.nameLong,
+			version: product.version,
+			quality: 'stable',
+			linkProtectionTrustedDomains: [
+				...(product.linkProtectionTrustedDomains || []),
+				// gitpodDomain
+			],
+			// 'configurationSync.store': {
+			// 	url: syncStoreURL,
+			// 	stableUrl: syncStoreURL,
+			// 	insidersUrl: syncStoreURL,
+			// 	canSwitch: false,
+			// 	authenticationProviders: {
+			// 		gitpod: {
+			// 			scopes: ['function:accessCodeSyncStorage']
+			// 		}
+			// 	}
+			// },
+			// webEndpointUrlTemplate
+		},
+		settingsSyncOptions: {
+			enabled: true,
+			enablementHandler: enablement => {
+				// TODO
+			}
+		},
+	}));
+
 	return subscriptions;
 }
 
 if (devMode) {
 	doStart();
+
 } else {
 	window.gitpod.ideService = {
 		get state() {
@@ -1013,6 +1094,6 @@ if (devMode) {
 			return _failureCause;
 		},
 		onDidChange: onDidChangeEmitter.event,
-		start: () => start()
+		start: () => doStartWeb()
 	};
 }
