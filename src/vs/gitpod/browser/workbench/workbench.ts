@@ -542,14 +542,14 @@ interface WorkspaceInfoResponse {
 	workspaceClusterHost: string;
 	ideAlias: string;
 }
-
+let supervisorHost = window.location.host;
+// running from sources
+if (devMode) {
+	supervisorHost = supervisorHost.substring(supervisorHost.indexOf('-') + 1);
+}
 async function doStart(): Promise<IDisposable> {
-	let supervisorHost = window.location.host;
-	// running from sources
-	if (devMode) {
-		supervisorHost = supervisorHost.substring(supervisorHost.indexOf('-') + 1);
-	}
-	const infoResponse = await fetch(window.location.protocol + '//' + supervisorHost + '/_supervisor/v1/info/workspace', {
+
+	const infoResponse = await fetch(window.location.protocol + '//' + supervisorHost + '/_supervisor/v1/status/ide', {
 		credentials: 'include'
 	});
 	if (!infoResponse.ok) {
@@ -1095,8 +1095,18 @@ if (devMode) {
 		},
 		onDidChange: onDidChangeEmitter.event,
 		start: () => {
-			const workpaceReady = false;
-			return workpaceReady ? start() : doStartWeb();
+			fetch(window.location.protocol + '//' + supervisorHost + '/_supervisor/v1/info/workspace', {
+				credentials: 'include'
+			}).then(async resp => {
+				if (resp.ok) {
+					start();
+				} else {
+					doStartWeb();
+				}
+			}, err => {
+				doStartWeb();
+			});
+			return toStop;
 		}
 	};
 }
