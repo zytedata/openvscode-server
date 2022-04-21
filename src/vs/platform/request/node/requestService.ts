@@ -80,9 +80,7 @@ export class RequestService extends Disposable implements IRequestService {
 			...process.env,
 			...shellEnv
 		};
-		const agent = options.agent ? options.agent : await getProxyAgent(options.url || '', env, { proxyUrl, strictSSL });
 
-		options.agent = agent;
 		options.strictSSL = strictSSL;
 
 		if (this.authorization) {
@@ -92,7 +90,7 @@ export class RequestService extends Disposable implements IRequestService {
 			};
 		}
 
-		return this._request(options, token);
+		return this._request(options, proxyUrl, env, token);
 	}
 
 	private async getNodeRequest(options: IRequestOptions): Promise<IRawRequestFunction> {
@@ -101,7 +99,7 @@ export class RequestService extends Disposable implements IRequestService {
 		return module.request;
 	}
 
-	private _request(options: NodeRequestOptions, token: CancellationToken): Promise<IRequestContext> {
+	private _request(options: NodeRequestOptions, proxyUrl: string | undefined, env: { [key: string]: string | undefined }, token: CancellationToken): Promise<IRequestContext> {
 
 		return Promises.withAsyncBody<IRequestContext>(async (c, e) => {
 			let req: http.ClientRequest;
@@ -111,6 +109,8 @@ export class RequestService extends Disposable implements IRequestService {
 				? options.getRawRequest(options)
 				: await this.getNodeRequest(options);
 
+			const proxyAgent = options.agent ? options.agent : await getProxyAgent(options.url || '', env, { proxyUrl, strictSSL: options.strictSSL });
+
 			const opts: https.RequestOptions = {
 				hostname: endpoint.hostname,
 				port: endpoint.port ? parseInt(endpoint.port) : (endpoint.protocol === 'https:' ? 443 : 80),
@@ -118,7 +118,7 @@ export class RequestService extends Disposable implements IRequestService {
 				path: endpoint.path,
 				method: options.type || 'GET',
 				headers: options.headers,
-				agent: options.agent,
+				agent: proxyAgent,
 				rejectUnauthorized: isBoolean(options.strictSSL) ? options.strictSSL : true
 			};
 
@@ -133,7 +133,7 @@ export class RequestService extends Disposable implements IRequestService {
 						...options,
 						url: res.headers['location'],
 						followRedirects: followRedirects - 1
-					}, token).then(c, e);
+					}, proxyUrl, env, token).then(c, e);
 				} else {
 					let stream: streams.ReadableStreamEvents<Uint8Array> = res;
 
