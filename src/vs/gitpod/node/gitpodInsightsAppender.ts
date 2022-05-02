@@ -20,6 +20,40 @@ import { ConsoleLogger, listen as doListen } from 'vscode-ws-jsonrpc';
 import * as grpc from '@grpc/grpc-js';
 import * as util from 'util';
 import { filter, mixin } from 'vs/base/common/objects';
+import * as prometheusClient from 'prom-client';
+const register = prometheusClient.register;
+const gateway = new prometheusClient.Pushgateway('http://localhost:22999', [], register);
+
+const suggestCallCounter = new prometheusClient.Counter({
+	name: 'gitpod_workspace_vscode_suggest_calls_total',
+	help: 'Total amount of VSCode suggest calls per provider',
+	labelNames: ['provider'],
+	registers: [register],
+});
+function increaseSuggestCallCounter(provider: string) {
+	suggestCallCounter.inc({ provider });
+}
+
+const suggestCallDurationHistogram = new prometheusClient.Histogram({
+	name: 'gitpod_workspace_vscode_suggest_calls_duration_seconds',
+	help: 'Duration of VSCode suggest calls per provider in seconds',
+	labelNames: ['provider'],
+	buckets: [0.01, 0.05, 0.1, 0.5, 1, 5, 10],
+	registers: [prometheusClient.register],
+});
+
+function observeSuggestCallsDuration(provider: string, duration: number) {
+	suggestCallDurationHistogram.observe({ provider }, duration);
+}
+
+function sendMetricsToGateway() {
+	gateway.push({ jobName: 'vscode' }, (err, resp) => {
+		if (err) {
+			console.error('send to push gateway failed', err);
+			return;
+		}
+	});
+}
 
 class SupervisorConnection {
 	readonly deadlines = {
@@ -41,7 +75,7 @@ class SupervisorConnection {
 }
 
 type GitpodConnection = Omit<GitpodServiceImpl<GitpodClient, GitpodServer>, 'server'> & {
-	server: Pick<GitpodServer, 'trackEvent'>
+	server: Pick<GitpodServer, 'trackEvent'>;
 };
 
 async function getSupervisorData() {
@@ -158,6 +192,17 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 	}
 
 	log(eventName: string, data?: any): void {
+		if (eventName === 'suggest.durations.json') {
+			let entries = JSON.parse(data.data).entries;
+			if (!Array.isArray(entries)) {
+				return;
+			}
+			for (const entry of entries) {
+				increaseSuggestCallCounter(entry.providerName);
+				observeSuggestCallsDuration(entry.providerName, entry.elapsedProvider / 1000);
+			}
+			sendMetricsToGateway();
+		}
 		this._withAIClient((aiClient) => {
 			data = mixin(data, this._defaultData);
 			data = validateTelemetryData(data);
