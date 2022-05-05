@@ -383,6 +383,9 @@ export class GitpodWorkspaceTreeDataProvider implements vscode.TreeDataProvider<
 	private portStatus: PortsStatusResponse | undefined;
 	updatePortsStatus(portsStatus: PortsStatusResponse): void {
 		this.portStatus = portsStatus;
+		for (const portStatus of portsStatus.getPortsList()) {
+			console.log('portStatus', portStatus.getLocalPort(), portStatus.getName(), portStatus.getDescription());
+		}
 		this.update();
 	}
 

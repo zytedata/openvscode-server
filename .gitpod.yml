@@ -1,7 +1,9 @@
 image:
   file: .gitpod.Dockerfile
 ports:
-  - port: 9888
+  - name: VS Code Browser
+    port: 9888
+    description: Instance where you can test your changes.
     onOpen: open-browser
 tasks:
   - init: |
