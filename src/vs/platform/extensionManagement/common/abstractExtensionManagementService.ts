@@ -155,6 +155,7 @@ export abstract class AbstractExtensionManagementService extends Disposable impl
 		this.logService.info('Installing extension:', installExtensionTask.identifier.id);
 		allInstallExtensionTasks.push({ task: installExtensionTask, manifest });
 		let installExtensionHasDependents: boolean = false;
+		const externalRequestedInstallExtensionTasks: IInstallExtensionTask[] = [];
 
 		try {
 			if (options.donotIncludePackAndDependencies) {
@@ -167,6 +168,7 @@ export abstract class AbstractExtensionManagementService extends Disposable impl
 						const key = ExtensionKey.create(gallery).toString();
 						if (this.installingExtensions.has(key)) {
 							this.logService.info('Extension is already requested to install', gallery.identifier.id);
+							externalRequestedInstallExtensionTasks.push(this.installingExtensions.get(key)!);
 						} else {
 							const task = this.createInstallExtensionTask(manifest, gallery, { ...options, donotIncludePackAndDependencies: true });
 							this.installingExtensions.set(key, task);
@@ -239,6 +241,9 @@ export abstract class AbstractExtensionManagementService extends Disposable impl
 					} finally { extensionsToInstallMap.delete(task.identifier.id.toLowerCase()); }
 				}));
 			}
+
+			// Await for extension dependencies that were requested to install beforehand
+			await this.joinAllSettled(externalRequestedInstallExtensionTasks.map(task => task.waitUntilTaskIsFinished()));
 
 			installResults.forEach(({ identifier }) => this.logService.info(`Extension installed successfully:`, identifier.id));
 			this._onDidInstallExtensions.fire(installResults);
