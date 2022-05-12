@@ -258,6 +258,7 @@ export class ExtensionsActivator implements IDisposable {
 			// Error condition 0: unknown extension
 			const error = new Error(`Cannot activate unknown extension '${currentActivation.id.value}'`);
 			const result = this._createAndSaveOperation(currentActivation, null, [], new FailedExtension(error));
+			this._logService.info(`>>>>>> cannot activate extension`, error);
 			this._host.onExtensionActivationError(
 				currentActivation.id,
 				error,
@@ -309,6 +310,7 @@ export class ExtensionsActivator implements IDisposable {
 			const currentExtensionFriendlyName = currentExtension.displayName || currentExtension.identifier.value;
 			const error = new Error(`Cannot activate the '${currentExtensionFriendlyName}' extension because it depends on unknown extension '${depId}'`);
 			const result = this._createAndSaveOperation(currentActivation, currentExtension.displayName, [], new FailedExtension(error));
+			this._logService.info(`>>>>>> cannot activate extension dependency`, error);
 			this._host.onExtensionActivationError(
 				currentExtension.identifier,
 				error,

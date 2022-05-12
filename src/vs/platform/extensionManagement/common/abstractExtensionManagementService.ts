@@ -243,7 +243,8 @@ export abstract class AbstractExtensionManagementService extends Disposable impl
 			}
 
 			// Await for extension dependencies that were requested to install beforehand
-			await this.joinAllSettled(externalRequestedInstallExtensionTasks.map(task => task.waitUntilTaskIsFinished()));
+			const localDeps = await this.joinAllSettled(externalRequestedInstallExtensionTasks.map(task => task.waitUntilTaskIsFinished()));
+			externalRequestedInstallExtensionTasks.forEach((task, i) => installResults.push({ local: localDeps[i], identifier: task.identifier, operation: task.operation, source: task.source }));
 
 			installResults.forEach(({ identifier }) => this.logService.info(`Extension installed successfully:`, identifier.id));
 			this._onDidInstallExtensions.fire(installResults);

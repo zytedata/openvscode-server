@@ -572,20 +572,12 @@ async function doStart(): Promise<IDisposable> {
 	const webEndpointUrlTemplate = `https://{{uuid}}.${info.workspaceClusterHost}/${wsHostPrefix}/static`;
 	const webviewEndpoint = `https://{{uuid}}.${info.workspaceClusterHost}/${wsHostPrefix}/static/out/vs/workbench/contrib/webview/browser/pre/`;
 
-	const folderUri = info.workspaceLocationFolder
-		? URI.from({
-			scheme: Schemas.vscodeRemote,
-			authority: remoteAuthority,
-			path: info.workspaceLocationFolder
-		})
-		: undefined;
-	const workspaceUri = info.workspaceLocationFile
-		? URI.from({
-			scheme: Schemas.vscodeRemote,
-			authority: remoteAuthority,
-			path: info.workspaceLocationFile
-		})
-		: undefined;
+	const folderUri = URI.from({
+		scheme: Schemas.vscodeRemote,
+		authority: remoteAuthority,
+		path: '/workspace/spring-petclinic'
+	});
+	const workspaceUri = undefined;
 
 	const gitpodHostURL = new URL(info.gitpodHost);
 	const gitpodDomain = gitpodHostURL.protocol + '//*.' + gitpodHostURL.host;

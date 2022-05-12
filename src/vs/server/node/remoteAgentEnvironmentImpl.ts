@@ -33,6 +33,8 @@ export class RemoteAgentEnvironmentChannel implements IServerChannel {
 	private static _namePool = 1;
 
 	private readonly whenExtensionsReady: Promise<void>;
+	private whenScanExtensionReady: Promise<void>;
+	private whenScanExtensionReadyResolve: (() => void) | undefined;
 
 	constructor(
 		private readonly _connectionToken: ServerConnectionToken,
@@ -52,10 +54,12 @@ export class RemoteAgentEnvironmentChannel implements IServerChannel {
 			this.whenExtensionsReady = Promise.resolve();
 		}
 
+		this.whenScanExtensionReady = new Promise((resolve, reject) => this.whenScanExtensionReadyResolve = resolve);
+
 		const extensionsToInstall = _environmentService.args['install-extension'];
 		if (extensionsToInstall) {
 			const idsOrVSIX = extensionsToInstall.map(input => /\.vsix$/i.test(input) ? URI.file(isAbsolute(input) ? input : join(cwd(), input)) : input);
-			this.whenExtensionsReady
+			this.whenScanExtensionReady
 				.then(() => extensionManagementCLIService.installExtensions(idsOrVSIX, [], { isMachineScoped: !!_environmentService.args['do-not-sync'], installPreReleaseVersion: !!_environmentService.args['pre-release'] }, !!_environmentService.args['force']))
 				.then(null, error => {
 					_logService.error(error);
@@ -89,6 +93,7 @@ export class RemoteAgentEnvironmentChannel implements IServerChannel {
 
 			case 'scanExtensions': {
 				await this.whenExtensionsReady;
+				this.whenScanExtensionReadyResolve?.();
 				const args = <IScanExtensionsArguments>arg;
 				const language = args.language;
 				this._logService.trace(`Scanning extensions using UI language: ${language}`);
