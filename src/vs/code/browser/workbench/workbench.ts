@@ -495,7 +495,10 @@ function doCreateUri(path: string, queryValues: Map<string, string>): URI {
 	const originalConfig: IWorkbenchConstructionOptions & { folderUri?: UriComponents; workspaceUri?: UriComponents } = JSON.parse(configElementAttribute);
 	const config: IWorkbenchConstructionOptions & { folderUri?: UriComponents; workspaceUri?: UriComponents } = {
 		remoteAuthority: window.location.host,
-		developmentOptions: originalConfig.developmentOptions
+		developmentOptions: originalConfig.developmentOptions,
+		settingsSyncOptions: originalConfig.settingsSyncOptions,
+		folderUri: originalConfig.folderUri,
+		workspaceUri: originalConfig.workspaceUri
 	};
 
 	// Create workbench
