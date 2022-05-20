@@ -1,42 +1,22 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
+/* eslint-disable header/header */
+
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
 
 const pickKeys = [
-	'extensionTips', 'extensionImportantTips', 'keymapExtensionTips',
-	'configBasedExtensionTips', 'extensionKeywords', 'extensionAllowedBadgeProviders',
-	'extensionAllowedBadgeProvidersRegex', 'extensionAllowedProposedApi',
-	'extensionEnabledApiProposals', 'extensionKind', 'languageExtensionTips'
+	'extensionTips',
+	'extensionImportantTips',
+	'keymapExtensionTips',
+	'configBasedExtensionTips',
+	'extensionKeywords',
+	'extensionAllowedBadgeProviders',
+	'extensionAllowedBadgeProvidersRegex',
+	'extensionAllowedProposedApi',
+	'extensionEnabledApiProposals',
+	'extensionKind',
+	'languageExtensionTips'
 ];
-
-async function start() {
-	const releasePath = path.join(__dirname, '../product-release.json');
-	if (!fs.existsSync(releasePath)) {
-		console.error('product-release.json is not exists, please copy product.json from VSCode Desktop Stable');
-		return;
-	}
-	const branchProduct = JSON.parse(fs.readFileSync(path.join(__dirname, '../product.json')).toString());
-	const releaseProduct = JSON.parse(fs.readFileSync(releasePath).toString());
-	const tmpProductPath = path.join(__dirname, '../product-tmp.json');
-	for (let key of pickKeys) {
-		branchProduct[key] = releaseProduct[key];
-	}
-	fs.writeFileSync(tmpProductPath, JSON.stringify(branchProduct, null, 4));
-
-	if (keysDiff(branchProduct, releaseProduct)) {
-		// allow-any-unicode-next-line
-		console.log('📦 check if you need these keys or not');
-	}
-	await checkProductExtensions(branchProduct);
-	// allow-any-unicode-next-line
-	console.log('📦 you can copy product-tmp.json file to product.json file and resolve logs above by yourself');
-	// allow-any-unicode-next-line
-	console.log('✅ done');
-}
 
 const AllowMissKeys = [
 	'win32SetupExeBasename',
@@ -88,6 +68,60 @@ const AllowMissKeys = [
 	'darwinUniversalAssetId',
 ];
 
+const propiertaryExtension = [
+	'ms-vscode-remote.remote-containers',
+	'ms-dotnettools.csharp',
+	'ms-vscode.cpptools-extension-pack',
+	'ms-azure-devops.azure-pipelines',
+	'msazurermtools.azurerm-vscode-tools',
+	'ms-azuretools.vscode-bicep',
+	'usqlextpublisher.usql-vscode-ext',
+	'ms-azuretools.vscode-azureterraform',
+	'VisualStudioExptTeam.vscodeintellicode-completions',
+	'ms-vsliveshare.vsliveshare',
+	'ms-toolsai.vscode-ai-remote',
+	'GitHub.codespaces',
+	'ms-vscode.azure-repos',
+	'ms-vscode.remote-repositories',
+	'ms-vscode-remote.remote-wsl',
+	'ms-vscode-remote.remote-ssh',
+	'GitHub.copilot',
+	'GitHub.copilot-nightly',
+	'GitHub.remotehub',
+	'GitHub.remotehub-insiders',
+	'ms-python.vscode-pylance',
+	'ms-vscode.azure-sphere-tools-ui',
+	'ms-azuretools.vscode-azureappservice',
+];
+
+async function start() {
+	const localPath = path.join(__dirname, '../product.json');
+	const releasePath = path.join(__dirname, '../product-release.json');
+	if (!fs.existsSync(releasePath)) {
+		console.error('product-release.json is not exists, please copy product.json from VSCode Desktop Stable');
+		return;
+	}
+
+	const branchProduct = JSON.parse(await fs.promises.readFile(localPath, { encoding: 'utf8' }));
+	const releaseProduct = JSON.parse(await fs.promises.readFile(releasePath, { encoding: 'utf8' }));
+	const tmpProductPath = path.join(__dirname, '../product-tmp.json');
+	for (let key of pickKeys) {
+		branchProduct[key] = releaseProduct[key];
+	}
+
+	await fs.promises.writeFile(tmpProductPath, JSON.stringify(branchProduct, null, '\t'));
+
+	if (keysDiff(branchProduct, releaseProduct)) {
+		// allow-any-unicode-next-line
+		console.log('📦 check if you need these keys or not');
+	}
+	await checkProductExtensions(branchProduct);
+	// allow-any-unicode-next-line
+	console.log('📦 you can copy product-tmp.json file to product.json file and resolve logs above by yourself');
+	// allow-any-unicode-next-line
+	console.log('✅ done');
+}
+
 function keysDiff(branch, release) {
 	const toMap = (ret, e) => {
 		ret[e] = true;
@@ -130,6 +164,10 @@ async function checkProductExtensions(product) {
 
 	// Check if extensions exists in openvsx
 	for (let id of uniqueExtIds) {
+		if (propiertaryExtension.includes(id)) {
+			continue;
+		}
+
 		const openvsxUrl = `https://open-vsx.org/api/${id.replace(/\./g, '/')}`;
 		const ok = await urlExists(openvsxUrl);
 		if (!ok) {
@@ -149,4 +187,4 @@ async function urlExists(url) {
 	});
 }
 
-start().then().catch(console.error);
+start().catch(console.error);
