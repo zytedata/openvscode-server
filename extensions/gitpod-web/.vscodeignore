@@ -3,6 +3,8 @@ src/**
 !src/common/config.json
 out/**
 build/**
+__mocks__
+jest.config.js
 portsview/**
 !portsview/public/**
 extension.webpack.config.js

@@ -516,27 +516,32 @@
   "scripts": {
     "postinstall": "yarn install:webview",
     "vscode:prepublish": "yarn build; yarn run compile --cwd ..",
-    "build": "yarn build:webview && yarn compile:ts",
+    "build": "yarn test; yarn build:webview && yarn compile:ts",
     "watch": "npm-run-all -lp watch:webview watch:ts",
     "compile:ts": "tsc -p ./",
     "watch:ts": "tsc -watch -p ./",
     "install:webview": "yarn --cwd ./portsview --modules-folder node_modules",
     "watch:webview": "yarn --cwd ./portsview run dev",
-    "build:webview": "yarn --cwd ./portsview run build"
+    "build:webview": "yarn --cwd ./portsview run build",
+    "test": "jest"
   },
   "devDependencies": {
+    "@types/jest": "^28.1.3",
     "@types/node": "16.x",
     "@types/node-fetch": "^2.5.12",
     "@types/uuid": "8.0.0",
     "@types/yauzl": "^2.9.1",
     "@types/yazl": "^2.4.2",
-    "npm-run-all": "^4.1.5"
+    "jest": "^28.1.1",
+    "npm-run-all": "^4.1.5",
+    "ts-jest": "^28.0.5"
   },
   "dependencies": {
     "@gitpod/gitpod-protocol": "main",
     "@gitpod/supervisor-api-grpc": "main",
     "gitpod-shared": "0.0.1",
     "node-fetch": "2.6.7",
+    "typescript": "^4.7.4",
     "uuid": "8.1.0",
     "vscode-nls": "^5.0.0",
     "yauzl": "^2.9.2",

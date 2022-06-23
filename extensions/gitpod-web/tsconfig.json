@@ -9,5 +9,5 @@
 	"references": [
 		{ "path": "../gitpod-shared" }
 	],
-	"exclude": ["./portsview"]
+	"exclude": ["./portsview", "**/*.spec.ts", "./__mocks__"]
 }
