@@ -514,15 +514,15 @@
     }
   },
   "scripts": {
-    "postinstall": "yarn install:webview",
     "vscode:prepublish": "yarn build; yarn run compile --cwd ..",
     "build": "yarn test; yarn build:webview && yarn compile:ts",
     "watch": "npm-run-all -lp watch:webview watch:ts",
     "compile:ts": "tsc -p ./",
     "watch:ts": "tsc -watch -p ./",
-    "install:webview": "yarn --cwd ./portsview --modules-folder node_modules",
-    "watch:webview": "yarn --cwd ./portsview run dev",
-    "build:webview": "yarn --cwd ./portsview run build",
+    "watch:webview": "rollup -c -w",
+    "build:webview": "rollup -c",
+		"start": "sirv public --no-clear",
+		"check:webview": "svelte-check --tsconfig ./tsconfig.webviews.json",
     "test": "jest"
   },
   "devDependencies": {
@@ -534,7 +534,22 @@
     "@types/yazl": "^2.4.2",
     "jest": "^28.1.1",
     "npm-run-all": "^4.1.5",
-    "ts-jest": "^28.0.5"
+    "ts-jest": "^28.0.5",
+    "@tsconfig/svelte": "^2.0.0",
+		"@types/vscode-webview": "^1.57.0",
+    "@rollup/plugin-commonjs": "^17.0.0",
+		"@rollup/plugin-json": "^4.1.0",
+		"@rollup/plugin-node-resolve": "^11.0.0",
+		"@rollup/plugin-typescript": "^8.0.0",
+    "rollup": "^2.3.4",
+		"rollup-plugin-copy": "^3.4.0",
+		"rollup-plugin-css-only": "^3.1.0",
+		"rollup-plugin-livereload": "^2.0.0",
+		"rollup-plugin-svelte": "^7.0.0",
+		"rollup-plugin-terser": "^7.0.0",
+		"svelte": "^3.0.0",
+		"svelte-check": "^2.0.0",
+		"svelte-preprocess": "^4.0.0"
   },
   "dependencies": {
     "@gitpod/gitpod-protocol": "main",
@@ -545,6 +560,9 @@
     "uuid": "8.1.0",
     "vscode-nls": "^5.0.0",
     "yauzl": "^2.9.2",
-    "yazl": "^2.5.1"
+    "yazl": "^2.5.1",
+    "@vscode/codicons": "^0.0.31",
+		"@vscode/webview-ui-toolkit": "^1.0.0",
+		"sirv-cli": "^2.0.0"
   }
 }

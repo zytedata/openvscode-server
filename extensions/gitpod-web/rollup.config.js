@@ -1,17 +1,17 @@
-import svelte from 'rollup-plugin-svelte';
-import commonjs from '@rollup/plugin-commonjs';
-import resolve from '@rollup/plugin-node-resolve';
-import livereload from 'rollup-plugin-livereload';
-import { terser } from 'rollup-plugin-terser';
-import sveltePreprocess from 'svelte-preprocess';
-import typescript from '@rollup/plugin-typescript';
-import css from 'rollup-plugin-css-only';
-import path from 'path';
-import copy from 'rollup-plugin-copy';
-import json from '@rollup/plugin-json';
+const svelte = require('rollup-plugin-svelte');
+const commonjs = require('@rollup/plugin-commonjs');
+const resolve = require('@rollup/plugin-node-resolve');
+const livereload = require('rollup-plugin-livereload');
+const { terser } = require('rollup-plugin-terser');
+const sveltePreprocess = require('svelte-preprocess');
+const typescript = require('@rollup/plugin-typescript');
+const css = require('rollup-plugin-css-only');
+const path = require('path');
+const copy = require('rollup-plugin-copy');
+const json = require('@rollup/plugin-json');
 
 // copy before packet
-import './rollup.copy';
+require('./rollup.copy');
 
 const production = !process.env.ROLLUP_WATCH;
 
@@ -36,19 +36,24 @@ function serve() {
 	};
 }
 
-export default {
-	input: path.join(__dirname, 'src/main.ts'),
+module.exports = {
+	input: path.join(__dirname, './portsview/src/main.ts'),
 	output: [
 		{
 			sourcemap: true,
 			format: 'iife',
 			name: 'app',
-			file: path.join(__dirname, 'public/bundle.js'),
+			file: path.join(__dirname, './public/portsview.js'),
 		},
 	],
 	plugins: [
 		svelte({
-			preprocess: sveltePreprocess({ sourceMap: !production }),
+			preprocess: sveltePreprocess({
+				typescript: {
+					tsconfigFile: './portsview/tsconfig.json'
+				},
+				sourceMap: !production
+			}),
 			compilerOptions: {
 				// enable run-time checks when not in production
 				dev: !production
@@ -63,21 +68,20 @@ export default {
 		json(),
 		// we'll extract any component CSS out into
 		// a separate file - better for performance
-		css({ output: 'bundle.css' }),
+		css({ output: 'portsview.css' }),
 
 		// If you have external dependencies installed from
 		// npm, you'll most likely need these plugins. In
 		// some cases you'll need additional configuration -
 		// consult the documentation for details:
 		// https://github.com/rollup/plugins/tree/master/packages/commonjs
-		resolve({
+		resolve.nodeResolve({
 			browser: true,
 			dedupe: ['svelte']
 		}),
 		commonjs(),
 		typescript({
-			sourceMap: !production,
-			inlineSources: !production
+			tsconfig: './portsview/tsconfig.json'
 		}),
 
 		// In dev mode, call `npm run start` once

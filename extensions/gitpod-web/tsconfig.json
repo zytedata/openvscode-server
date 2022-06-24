@@ -2,12 +2,15 @@
 	"extends": "../tsconfig.base.json",
 	"compilerOptions": {
 		"outDir": "./out",
-		"rootDir": "./src",
 		"esModuleInterop": true,
 		"sourceMap": true,
 	},
 	"references": [
 		{ "path": "../gitpod-shared" }
 	],
-	"exclude": ["./portsview", "**/*.spec.ts", "./__mocks__"]
+	"exclude": [
+		"./public",
+		"**/*.spec.ts",
+		"./__mocks__"
+	]
 }

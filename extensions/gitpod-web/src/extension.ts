@@ -420,8 +420,8 @@ export class GitpodPortViewProvider implements vscode.WebviewViewProvider {
 	}
 
 	private _getHtmlForWebview(webview: vscode.Webview) {
-		const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'portsview', 'public', 'bundle.js'));
-		const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'portsview', 'public', 'bundle.css'));
+		const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'public', 'portsview.js'));
+		const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'public', 'portsview.css'));
 		const nonce = getNonce();
 		// <meta
 		// 		csp-nonce
@@ -429,18 +429,18 @@ export class GitpodPortViewProvider implements vscode.WebviewViewProvider {
 		//         content="default-src 'none'; img-src data: ${webview.cspSource}; font-src ${webview.cspSource}; style-src ${webview.cspSource} 'nonce-${nonce}'; script-src 'nonce-${nonce}';"
 		//         />
 		return `<!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8" />
-                <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+			<html lang="en">
+			<head>
+				<meta charset="UTF-8" />
+				<meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
-                <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-                <link nonce="${nonce}" href="${styleUri}" rel="stylesheet" />
-                <title>Gitpod Port View</title>
-            </head>
-            <body></body>
-            <script nonce="${nonce}" src="${scriptUri}"></script>
-            </html>`;
+				<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+				<link nonce="${nonce}" href="${styleUri}" rel="stylesheet" />
+				<title>Gitpod Port View</title>
+			</head>
+			<body></body>
+			<script nonce="${nonce}" src="${scriptUri}"></script>
+			</html>`;
 	}
 
 	private tunnelsMap = new Map<number, vscode.TunnelDescription>();

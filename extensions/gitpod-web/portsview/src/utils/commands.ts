@@ -2,7 +2,7 @@
  *  Copyright (c) Gitpod. All rights reserved.
  *--------------------------------------------------------------------------------------------*/
 
-import nlsFile from '../../public/package.nls.json';
+import nlsFile from '../../../public/package.nls.json';
 import type { GitpodPortObject, PortCommand } from '../protocol/gitpod';
 
 // TODO: use vscode-nls
@@ -12,7 +12,7 @@ export function getNLSTitle(command: PortCommand) {
 		case 'preview':
 			name = 'openPreview';
 	}
-	return nlsFile[name] ?? command as string;
+	return (nlsFile as Record<string, string>)[name] ?? command as string;
 }
 
 export const commandIconMap: Record<PortCommand, string> = {
@@ -28,7 +28,7 @@ export const commandIconMap: Record<PortCommand, string> = {
 };
 
 export function getCommands(port: GitpodPortObject): PortCommand[] {
-	return getSplitCommands(port).filter(e => e != null);
+	return getSplitCommands(port).filter(e => !!e) as PortCommand[];
 }
 
 export function getSplitCommands(port: GitpodPortObject) {
