@@ -1,16 +1,13 @@
 import { ExposedPortInfo, OnPortExposedAction, PortAutoExposure, PortsStatus, PortVisibility, TunneledPortInfo } from '@gitpod/supervisor-api-grpc/lib/status_pb';
-import { GitpodExtensionContext } from 'gitpod-shared';
-import { GitpodWorkspacePort, PortInfo } from './port';
-import { TunnelDescription } from 'vscode';
+import { GitpodWorkspacePort, PortInfo } from '../util/port';
 import { TunnelVisiblity } from '@gitpod/supervisor-api-grpc/lib/port_pb';
-
-import { describe, expect, test } from '@jest/globals';
+import { default as assert } from 'assert';
 
 describe('GitpodWorkspacePort', () => {
 
 	const genPortsStatus = (obj: PortsStatus.AsObject) => {
 		function genExposed(obj?: ExposedPortInfo.AsObject) {
-			if (obj == null) {
+			if (!obj) {
 				return;
 			}
 			const exposed = new ExposedPortInfo();
@@ -20,7 +17,7 @@ describe('GitpodWorkspacePort', () => {
 			return exposed;
 		}
 		function genTunneledPortInfo(obj?: TunneledPortInfo.AsObject) {
-			if (obj == null) {
+			if (!obj) {
 				return;
 			}
 			const tunneled = new TunneledPortInfo();
@@ -49,7 +46,7 @@ describe('GitpodWorkspacePort', () => {
 
 	interface TestI { ps: Partial<PortsStatus.AsObject>; tunnel?: TmpTunnel; result: PortInfo }
 
-	test('parsePortInfo', () => {
+	it('parsePortInfo', () => {
 		const base = {
 			name: 'name',
 			description: 'desc',
@@ -257,9 +254,8 @@ describe('GitpodWorkspacePort', () => {
 		];
 		for (const t of cases) {
 			const ps = genPortsStatus(Object.assign({}, base, t.ps));
-			const result = new GitpodWorkspacePort(ps.getLocalPort(), {} as GitpodExtensionContext, ps, t.tunnel as TunnelDescription);
-			delete result.info.iconPath;
-			expect(result.info).toEqual(t.result);
+			const result = new GitpodWorkspacePort(ps.getLocalPort(), ps, t.tunnel as any);
+			assert.deepStrictEqual(result.info, t.result);
 		}
 	});
 });

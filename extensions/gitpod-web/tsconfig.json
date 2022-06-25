@@ -10,7 +10,6 @@
 	],
 	"exclude": [
 		"./public",
-		"**/*.spec.ts",
-		"./__mocks__"
+		"./portsview"
 	]
 }

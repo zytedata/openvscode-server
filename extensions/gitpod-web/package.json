@@ -521,35 +521,35 @@
     "watch:ts": "tsc -watch -p ./",
     "watch:webview": "rollup -c -w",
     "build:webview": "rollup -c",
-		"start": "sirv public --no-clear",
-		"check:webview": "svelte-check --tsconfig ./tsconfig.webviews.json",
-    "test": "jest"
+    "start": "sirv public --no-clear",
+    "check:webview": "svelte-check --tsconfig ./tsconfig.webviews.json",
+    "test": "mocha --recursive \"./out/**/*.test.js\""
   },
   "devDependencies": {
-    "@types/jest": "^28.1.3",
     "@types/node": "16.x",
     "@types/node-fetch": "^2.5.12",
     "@types/uuid": "8.0.0",
+    "@types/mocha": "^9.0.0",
+    "@types/vscode-webview": "^1.57.0",
     "@types/yauzl": "^2.9.1",
     "@types/yazl": "^2.4.2",
-    "jest": "^28.1.1",
+    "mocha": "^9.1.3",
     "npm-run-all": "^4.1.5",
-    "ts-jest": "^28.0.5",
     "@tsconfig/svelte": "^2.0.0",
-		"@types/vscode-webview": "^1.57.0",
     "@rollup/plugin-commonjs": "^17.0.0",
-		"@rollup/plugin-json": "^4.1.0",
-		"@rollup/plugin-node-resolve": "^11.0.0",
-		"@rollup/plugin-typescript": "^8.0.0",
+    "@rollup/plugin-json": "^4.1.0",
+    "@rollup/plugin-node-resolve": "^11.0.0",
+    "@rollup/plugin-typescript": "^8.0.0",
     "rollup": "^2.3.4",
-		"rollup-plugin-copy": "^3.4.0",
-		"rollup-plugin-css-only": "^3.1.0",
-		"rollup-plugin-livereload": "^2.0.0",
-		"rollup-plugin-svelte": "^7.0.0",
-		"rollup-plugin-terser": "^7.0.0",
-		"svelte": "^3.0.0",
-		"svelte-check": "^2.0.0",
-		"svelte-preprocess": "^4.0.0"
+    "rollup-plugin-copy": "^3.4.0",
+    "rollup-plugin-css-only": "^3.1.0",
+    "rollup-plugin-livereload": "^2.0.0",
+    "rollup-plugin-svelte": "^7.0.0",
+    "rollup-plugin-terser": "^7.0.0",
+    "svelte": "^3.0.0",
+    "svelte-check": "^2.0.0",
+    "svelte-preprocess": "^4.0.0",
+    "sirv-cli": "^2.0.0"
   },
   "dependencies": {
     "@gitpod/gitpod-protocol": "main",
@@ -562,7 +562,6 @@
     "yauzl": "^2.9.2",
     "yazl": "^2.5.1",
     "@vscode/codicons": "^0.0.31",
-		"@vscode/webview-ui-toolkit": "^1.0.0",
-		"sirv-cli": "^2.0.0"
+    "@vscode/webview-ui-toolkit": "^1.0.0"
   }
 }
