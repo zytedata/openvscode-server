@@ -19,6 +19,8 @@ import { ITelemetryAppender, NullTelemetryService, supportsTelemetry, validateTe
 import { IBrowserWorkbenchEnvironmentService } from 'vs/workbench/services/environment/browser/environmentService';
 import { IRemoteAgentService } from 'vs/workbench/services/remote/common/remoteAgentService';
 import { resolveWorkbenchCommonProperties } from 'vs/workbench/services/telemetry/browser/workbenchCommonProperties';
+// eslint-disable-next-line code-import-patterns
+import { GitpodInsightsAppender } from 'vs/gitpod/browser/gitpodInsightsAppender';
 
 class WebAppInsightsAppender implements ITelemetryAppender {
 	private _aiClient: ApplicationInsights | undefined;
@@ -124,7 +126,7 @@ export class TelemetryService extends Disposable implements ITelemetryService {
 			// If remote server is present send telemetry through that, else use the client side appender
 			const telemetryProvider: ITelemetryAppender = remoteAgentService.getConnection() !== null ? { log: remoteAgentService.logTelemetry.bind(remoteAgentService), flush: remoteAgentService.flushTelemetry.bind(remoteAgentService) } : new WebAppInsightsAppender('monacoworkbench', productService.aiConfig?.asimovKey);
 			const config: ITelemetryServiceConfig = {
-				appenders: [new WebTelemetryAppender(telemetryProvider), new TelemetryLogAppender(loggerService, environmentService)],
+				appenders: [new WebTelemetryAppender(telemetryProvider), new GitpodInsightsAppender(productService), new TelemetryLogAppender(loggerService, environmentService)],
 				commonProperties: resolveWorkbenchCommonProperties(storageService, productService.commit, productService.version, environmentService.remoteAuthority, productService.embedderIdentifier, productService.removeTelemetryMachineId, environmentService.options && environmentService.options.resolveCommonTelemetryProperties),
 				sendErrorTelemetry: this.sendErrorTelemetry,
 			};
