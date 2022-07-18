@@ -10,10 +10,12 @@
 	let ports: GitpodPortObject[] = [];
 
 	window.addEventListener("message", (event) => {
+		console.log('on.message', '============hwen.p.2', + new Date());
 		if (event.data.command === "updatePorts") {
 			ports = event.data.ports;
 		}
 	});
+	console.log('queryData', '============hwen.p.3', + new Date());
 	vscode.postMessage({ command: "queryPortData" });
 </script>
 

@@ -403,16 +403,21 @@ export class GitpodPortViewProvider implements vscode.WebviewViewProvider {
 	private readonly onDidChangePortsEmitter = new vscode.EventEmitter<Map<number, GitpodWorkspacePort>>();
 	readonly onDidChangePorts = this.onDidChangePortsEmitter.event;
 
-	constructor(private readonly context: GitpodExtensionContext) { }
+	constructor(private readonly context: GitpodExtensionContext) {
+		console.log('port view constructor', '===========hwen.0', + new Date());
+	}
 
 	// @ts-ignore
 	resolveWebviewView(webviewView: vscode.WebviewView, context: vscode.WebviewViewResolveContext<unknown>, token: vscode.CancellationToken): void | Thenable<void> {
+		console.log('resolveWebviewView', '===========hwen.1', + new Date());
 		this._view = webviewView;
 		webviewView.webview.options = {
 			enableScripts: true,
 			localResourceRoots: [this.context.extensionUri],
 		};
+		console.log('_getHtmlForWebview', '===========hwen.2', + new Date());
 		webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
+		console.log('_getHtmlForWebview.after', '===========hwen.3', + new Date());
 		webviewView.onDidChangeVisibility(() => {
 			if (!webviewView.visible) {
 				return;
@@ -423,8 +428,11 @@ export class GitpodPortViewProvider implements vscode.WebviewViewProvider {
 	}
 
 	private _getHtmlForWebview(webview: vscode.Webview) {
+		console.log('asWebviewUri.1', '===========hwen.3.1', + new Date());
 		const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'portsview', 'public', 'bundle.js'));
+		console.log('asWebviewUri.2', '===========hwen.3.2', + new Date());
 		const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'portsview', 'public', 'bundle.css'));
+		console.log('asWebviewUri.3', '===========hwen.3.3', + new Date());
 		const nonce = getNonce();
 		return `<!DOCTYPE html>
 	<html lang="en">
@@ -482,14 +490,17 @@ export class GitpodPortViewProvider implements vscode.WebviewViewProvider {
 	}
 
 	private updateHtml(): void {
+		console.log('updateHtml postMessage', '===========hwen.6', +new Date());
 		const ports = Array.from(this.portMap.values()).map(e => e.toSvelteObject());
 		this._view?.webview.postMessage({ command: 'updatePorts', ports });
 	}
 
 	private onHtmlCommand() {
+		console.log('onDidReceiveMessage', '===========hwen.4', +new Date());
 		this._view?.webview.onDidReceiveMessage(async (message: { command: PortCommand; port: { info: PortInfo; status: PortsStatus.AsObject } }) => {
 			if (message.command === 'queryPortData') {
 				this.updateHtml();
+				console.log('queryPortData => updateHtml', '===========hwen.5', +new Date());
 				return;
 			}
 			const port = this.portMap.get(message.port.status.localPort);
