@@ -289,12 +289,12 @@
         },
         {
           "command": "gitpod.ports.preview",
-          "when": "view == gitpod.workspace && viewItem =~ /exposed/ || viewItem =~ /tunneled/",
+          "when": "view == gitpod.workspace && viewItem =~ /exposed/ || viewItem =~ /tunneled/",
           "group": "inline@3"
         },
         {
           "command": "gitpod.ports.openBrowser",
-          "when": "view == gitpod.workspace && viewItem =~ /exposed/ || viewItem =~ /tunneled/",
+          "when": "view == gitpod.workspace && viewItem =~ /exposed/ || viewItem =~ /tunneled/",
           "group": "inline@4"
         },
         {
@@ -527,7 +527,7 @@
         "gitpod.experimental.portsView.enabled": {
           "type": "boolean",
           "description": "Enable Gitpod portsView experiment features",
-          "default": true
+          "default": false
         }
       }
     },
