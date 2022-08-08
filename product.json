@@ -129,7 +129,6 @@
 		"rebornix.Ruby": "{**/*.rb,**/*.erb,**/*.reek,**/.fasterer.yml,**/ruby-lint.yml,**/.rubocop.yml}",
 		"DotJoshJohnson.xml": "{**/*.xml}",
 		"stylelint.vscode-stylelint": "{**/.stylelintrc,**/stylelint.config.js}",
-		"eg2.vscode-npm-script": "{**/package.json}",
 		"ms-mssql.mssql": "{**/*.sql}",
 		"mtxr.sqltools": "{**/*.sql}",
 		"ms-vscode.sublime-keybindings": "{**/.sublime-project,**/.sublime-workspace}",
@@ -163,10 +162,6 @@
 				"python"
 			],
 			"pattern": "{**/*.py}"
-		},
-		"ms-toolsai.jupyter": {
-			"name": "Jupyter",
-			"pattern": "{**/*.ipynb}"
 		},
 		"golang.Go": {
 			"name": "Go",
