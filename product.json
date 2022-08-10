@@ -102,9 +102,6 @@
 		],
 		"ms-vscode.anycode": [
 			"extensionsAny"
-		],
-		"ms-vscode.cpptools": [
-			"terminalDataWriteEvent"
 		]
 	},
 	"extensionTips": {
