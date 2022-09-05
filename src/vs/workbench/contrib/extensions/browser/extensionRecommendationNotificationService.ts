@@ -183,8 +183,16 @@ export class ExtensionRecommendationNotificationService implements IExtensionRec
 		}
 
 		let installed = await this.extensionManagementService.getInstalled();
+		console.log('===============hwen.installed', JSON.stringify(installed));
 		installed = installed.filter(l => this.extensionEnablementService.getEnablementState(l) !== EnablementState.DisabledByExtensionKind); // Filter extensions disabled by kind
-		recommendations = recommendations.filter(extensionId => installed.every(local => !areSameExtensions({ id: extensionId }, local.identifier)));
+		console.log('===============hwen.installedFilter', JSON.stringify(installed));
+		recommendations = recommendations.filter(extensionId => {
+			return installed.every(local => {
+				const everyResult = !areSameExtensions({ id: extensionId }, local.identifier);
+				console.log(`================hwen.every.${extensionId}`, JSON.stringify({ extensionId, local, everyResult }));
+				return everyResult;
+			})
+		});
 		if (!recommendations.length) {
 			return;
 		}
