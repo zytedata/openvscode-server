@@ -6,7 +6,7 @@
 			function getMetricsUrl() {
 				const gitpodHost = "{{GITPOD_HOST}}";
 				if (!gitpodHost) {
-					return '';
+					return 'https://ide.gitpod-staging.com/metrics-api';
 				}
 				return `https://ide.${gitpodHost}/metrics-api`;
 			}
@@ -154,6 +154,20 @@
 				'@gitpod/local-app-api-grpcweb': `${baseUrl}/remote/web/node_modules/@gitpod/local-app-api-grpcweb/lib/localapp.js`,
 				'@improbable-eng/grpc-web': `${baseUrl}/remote/web/node_modules/@improbable-eng/grpc-web/dist/grpc-web-client.umd.js`,
 				'@zip.js/zipjs': `${baseUrl}/remote/web/node_modules/@zip.js/zip.js/dist/zip-no-worker-deflate.min.js`
+			},
+			onError: function (err) {
+				if (err.phase === 'loading') {
+					const e = new Error("LoadError")
+					e.stack = err.stack
+					gitpodMetricsReportError(e, { resource: 'vscode-web-workbench', url: err.moduleId })
+					return;
+				}
+				if (err.phase === 'factory') {
+					const e = new Error("FactoryError")
+					e.stack = err.stack
+					gitpodMetricsReportError(e, { resource: 'vscode-web-workbench', url: err.moduleId })
+					return;
+				}
 			}
 		});
 	</script>
