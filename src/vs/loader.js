@@ -702,6 +702,7 @@ var AMDLoader;
                 if (cspNonce) {
                     script.setAttribute('nonce', cspNonce);
                 }
+                script.setAttribute('crossorigin', 'anonymous')
                 document.getElementsByTagName('head')[0].appendChild(script);
             }
         };
