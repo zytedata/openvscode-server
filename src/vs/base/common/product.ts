@@ -175,6 +175,7 @@ export interface IGitpodPreviewConfiguration {
 	log?: {
 		analytics?: boolean;
 		metrics?: boolean;
+		errorReports?: boolean;
 	};
 }
 
