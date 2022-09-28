@@ -94,6 +94,7 @@ for (const extensionName of marketplaceExtensions) {
 	gulp.task(bundleExtension);
 	const publishExtension = task.define('gitpod:publish-extension:' + extensionName, task.series(
 		bundleExtension,
+		bundlePortsWebview,
 		() => vsce.publish({
 			cwd: path.join(outMarketplaceExtensions, extensionName)
 		})
