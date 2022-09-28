@@ -42,11 +42,6 @@
         "enablement": "gitpod.inWorkspace == true && gitpod.workspaceOwned == true"
       },
       {
-        "command": "gitpod.showReleaseNotes",
-        "title": "%showReleaseNotes%",
-        "enablement": "gitpod.inWorkspace == true && gitpod.workspaceOwned == true"
-      },
-      {
         "command": "gitpod.open.settings",
         "title": "%openSettings%",
         "enablement": "gitpod.inWorkspace == true"
