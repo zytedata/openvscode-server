@@ -520,7 +520,7 @@ export class ExtensionsListView extends ViewPane {
 			result = local.filter(e => !e.isBuiltin && matchingText(e));
 			result = this.sortExtensions(result, options);
 		} else {
-			result = local.filter(e => (!e.isBuiltin || e.outdated || e.reloadRequiredStatus !== undefined) && matchingText(e));
+			result = local.filter(e => (!e.isBuiltin || e.outdated /* || e.reloadRequiredStatus !== undefined */) && matchingText(e));
 			const runningExtensionsById = runningExtensions.reduce((result, e) => { result.set(ExtensionIdentifier.toKey(e.identifier.value), e); return result; }, new Map<string, IExtensionDescription>());
 
 			const defaultSort = (e1: IExtension, e2: IExtension) => {
