@@ -508,11 +508,6 @@
           "type": "boolean",
           "description": "Control whether to prompt to open in VS Code Desktop on page load.",
           "default": false
-        },
-        "gitpod.experimental.portsView.enabled": {
-          "type": "boolean",
-          "description": "Enable Gitpod portsView experiment features",
-          "default": false
         }
       }
     },
