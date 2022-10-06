@@ -695,5 +695,6 @@
 	},
 	"linkProtectionTrustedDomains": [
 		"https://open-vsx.org"
-	]
+	],
+	"enableSyncingProfiles": true
 }
