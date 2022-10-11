@@ -420,7 +420,7 @@
         {
           "id": "gitpod.workspace",
           "name": "Gitpod Workspace",
-          "when": "!gitpod.portsView.visible"
+          "when": "false"
         }
       ],
       "portsView": [
@@ -429,8 +429,7 @@
           "name": "",
           "type": "webview",
           "contextualTitle": "",
-          "icon": "$(plug)",
-          "when": "gitpod.portsView.visible"
+          "icon": "$(plug)"
         }
       ]
     },
