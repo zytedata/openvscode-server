@@ -313,35 +313,24 @@ async function registerPorts(context: GitpodExtensionContext): Promise<void> {
 	}
 
 	context.subscriptions.push(observePortsStatus());
-	context.subscriptions.push(vscode.commands.registerCommand('gitpod.resolveExternalPort', (portNumber: number) => {
-		// eslint-disable-next-line no-async-promise-executor
-		return new Promise<string>(async (resolve, reject) => {
-			try {
-				const tryResolve = () => {
-					const port = portMap.get(portNumber);
-					const exposed = port?.status?.exposed;
-					if (exposed) {
-						resolve(exposed.url);
-						return true;
-					}
-					return false;
-				};
-				if (!tryResolve()) {
-					const listenerWebview = portViewProvider.onDidChangePorts(element => {
-						if (element === portViewProvider.portMap && tryResolve()) {
-							listenerWebview?.dispose();
-						}
-					});
-					const request = new ExposePortRequest();
-					request.setPort(portNumber);
-					await util.promisify(context.supervisor.control.exposePort.bind(context.supervisor.control, request, context.supervisor.metadata, {
-						deadline: Date.now() + context.supervisor.deadlines.normal
-					}))();
-				}
-			} catch (e) {
-				reject(e);
-			}
-		});
+	context.subscriptions.push(vscode.commands.registerCommand('gitpod.resolveExternalPort', async (portNumber: number) => {
+		const port = portMap.get(portNumber);
+		const exposed = port?.status?.exposed;
+		if (exposed) {
+			return exposed.url;
+		}
+
+		const request = new ExposePortRequest();
+		request.setPort(portNumber);
+		await util.promisify(context.supervisor.control.exposePort.bind(context.supervisor.control, request, context.supervisor.metadata, {
+			deadline: Date.now() + context.supervisor.deadlines.normal
+		}))();
+
+		// Just construct the port url, maybe we can add an api as to get the port url template
+		const externalUrl = new URL(context.info.getWorkspaceUrl());
+		externalUrl.hostname = `${portNumber}-${externalUrl.hostname}`;
+
+		return externalUrl.toString();
 	}));
 	context.subscriptions.push(vscode.commands.registerCommand('gitpod.ports.makePrivate', ({ port }: PortItem) => {
 		context.fireAnalyticsEvent({
