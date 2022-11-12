@@ -306,15 +306,9 @@ export abstract class AbstractExtensionManagementService extends Disposable impl
 			this._onDidInstallExtensions.fire(allInstallExtensionTasks.map(({ task }) => ({ identifier: task.identifier, operation: InstallOperation.Install, source: task.source, context: options.context, profileLocation: options.profileLocation })));
 			throw error;
 		} finally {
-			for (const [key, { task, waitingTasks }] of this.installingExtensions.entries()) {
-				const index = waitingTasks.indexOf(installExtensionTask);
-				if (index !== -1) {
-					/* Current task was waiting for this task */
-					waitingTasks.splice(index, 1);
-				}
-				if (waitingTasks.length === 0 // No tasks are waiting for this task
-					&& (task === installExtensionTask || index !== -1)) {
-					this.installingExtensions.delete(key);
+			for (const ext of installResults) {
+				if (ext.source && !URI.isUri(ext.source)) {
+					this.installingExtensions.delete(getInstallExtensionTaskKey(ext.source));
 				}
 			}
 		}
@@ -363,10 +357,12 @@ export abstract class AbstractExtensionManagementService extends Disposable impl
 		}
 
 		const installed = await this.getInstalled(undefined, profile);
-		const knownIdentifiers = [extensionIdentifier];
+		const knownIdentifiers: IExtensionIdentifier[] = [];
 
 		const allDependenciesAndPacks: { gallery: IGalleryExtension; manifest: IExtensionManifest }[] = [];
 		const collectDependenciesAndPackExtensionsToInstall = async (extensionIdentifier: IExtensionIdentifier, manifest: IExtensionManifest): Promise<void> => {
+			knownIdentifiers.push(extensionIdentifier);
+
 			const dependecies: string[] = manifest.extensionDependencies || [];
 			const dependenciesAndPackExtensions = [...dependecies];
 			if (manifest.extensionPack) {
@@ -383,12 +379,11 @@ export abstract class AbstractExtensionManagementService extends Disposable impl
 
 			if (dependenciesAndPackExtensions.length) {
 				// filter out known extensions
-				const identifiers = [...knownIdentifiers, ...allDependenciesAndPacks.map(r => r.gallery.identifier)];
-				const ids = dependenciesAndPackExtensions.filter(id => identifiers.every(galleryIdentifier => !areSameExtensions(galleryIdentifier, { id })));
+				const ids = dependenciesAndPackExtensions.filter(id => knownIdentifiers.every(galleryIdentifier => !areSameExtensions(galleryIdentifier, { id })));
 				if (ids.length) {
 					const galleryExtensions = await this.galleryService.getExtensions(ids.map(id => ({ id, preRelease: installPreRelease })), CancellationToken.None);
 					for (const galleryExtension of galleryExtensions) {
-						if (identifiers.find(identifier => areSameExtensions(identifier, galleryExtension.identifier))) {
+						if (knownIdentifiers.find(identifier => areSameExtensions(identifier, galleryExtension.identifier))) {
 							continue;
 						}
 						const isDependency = dependecies.some(id => areSameExtensions({ id }, galleryExtension.identifier));
