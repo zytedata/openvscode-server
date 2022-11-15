@@ -42,6 +42,48 @@ export function mapMetrics(source: 'window' | 'remote-server', eventName: string
 	return maybeMetrics instanceof Array ? maybeMetrics : typeof maybeMetrics === 'object' ? [maybeMetrics] : undefined;
 }
 
+const criticalExtensionId = [
+	'GitHub.vscode-pull-request-github',
+	'ms-azuretools.vscode-docker',
+	'dbaeumer.vscode-eslint',
+	'tabnine.tabnine-vscode',
+	'TshakaEricLekholoane.hy',
+	'esbenp.prettier-vscode',
+	'eamodio.gitlens',
+	// golang
+	'golang.go',
+	// rust
+	'rust-lang.rust',
+	// java
+	'pivotal.vscode-spring-boot',
+	'redhat.java',
+	'vscjava.vscode-java-debug',
+	'vscjava.vscode-java-test',
+	'vscjava.vscode-maven',
+	'vscjava.vscode-java-dependency',
+	'VisualStudioExptTeam.vscodeintellicode',
+	// jupyter
+	'ms-python.python',
+	'ms-toolsai.jupyter',
+	'ms-toolsai.jupyter-keymap',
+	'ms-toolsai.jupyter-renderers',
+	// ibmi
+	'barrettotte.ibmi-languages',
+	'HalcyonTechLtd.code-for-ibmi',
+	// nix
+	'bbenoist.Nix',
+	// terraform
+	'hashicorp.terraform',
+	// scala
+	'scala-lang.scala',
+	'scalameta.metals',
+	// astro
+	'astro-build.astro-vscode',
+	// vue
+	'octref.vetur',
+	'johnsoncodehk.volar',
+];
+
 function doMapMetrics(source: 'window' | 'remote-server', eventName: string, data: any, extraData?: any): IDEMetric[] | IDEMetric | undefined {
 	if (source === 'remote-server') {
 		if (eventName.startsWith('extensionGallery:')) {
@@ -53,8 +95,9 @@ function doMapMetrics(source: 'window' | 'remote-server', eventName: string, dat
 					labels: {
 						operation,
 						status: data.success ? 'success' : 'failure',
-						galleryHost: extraData.galleryHost
-						// TODO errorCode
+						galleryHost: extraData.galleryHost,
+						extensionType: criticalExtensionId.includes(data.id) ? 'critical' : 'normal',
+						errorCode: data.errorcode
 					}
 				}];
 				if (typeof data.duration === 'number') {
@@ -63,7 +106,8 @@ function doMapMetrics(source: 'window' | 'remote-server', eventName: string, dat
 						name: 'gitpod_vscode_extension_gallery_operation_duration_seconds',
 						labels: {
 							operation,
-							galleryHost: extraData.galleryHost
+							galleryHost: extraData.galleryHost,
+							extensionType: criticalExtensionId.includes(data.id) ? 'critical' : 'normal',
 						},
 						value: data.duration / 1000
 					});
