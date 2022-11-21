@@ -83,6 +83,9 @@ async function validateExtensions(extensionsToValidate: { id: string; version?: 
 			}
 			return resp.json() as Promise<IRawGalleryQueryResult>;
 		}, e => {
+			if (e.name === 'AbortError') {
+				return undefined;
+			}
 			console.error('Fetch failed while querying gallery service', e);
 			return undefined;
 		});
