@@ -57,7 +57,18 @@ export class RemoteAgentEnvironmentChannel implements IServerChannel {
 
 		const extensionsToInstall = _environmentService.args['install-extension'];
 		if (extensionsToInstall) {
-			const idsOrVSIX = extensionsToInstall.map(input => /\.vsix$/i.test(input) ? URI.file(isAbsolute(input) ? input : join(cwd(), input)) : input);
+			const idsOrVSIX = extensionsToInstall.map(input => {
+				if (/\.vsix$/i.test(input)) {
+					if (/^https?:\/\//.test(input)) {
+						return URI.parse(input);
+					}
+					if (!isAbsolute(input)) {
+						return join(cwd(), input);
+					}
+					return URI.file(input);
+				}
+				return input;
+			});
 			this.whenExtensionsReady
 				.then(() => extensionManagementCLI.installExtensions(idsOrVSIX, [], { isMachineScoped: !!_environmentService.args['do-not-sync'], installPreReleaseVersion: !!_environmentService.args['pre-release'] }, !!_environmentService.args['force']))
 				.then(null, error => {

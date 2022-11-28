@@ -280,7 +280,18 @@ class CliMain extends Disposable {
 	}
 
 	private asExtensionIdOrVSIX(inputs: string[]): (string | URI)[] {
-		return inputs.map(input => /\.vsix$/i.test(input) ? URI.file(isAbsolute(input) ? input : join(cwd(), input)) : input);
+		return inputs.map(input => {
+			if (/\.vsix$/i.test(input)) {
+				if (/^https?:\/\//.test(input)) {
+					return URI.parse(input);
+				}
+				if (!isAbsolute(input)) {
+					return join(cwd(), input);
+				}
+				return URI.file(input);
+			}
+			return input;
+		});
 	}
 
 	private async setInstallSource(environmentService: INativeEnvironmentService, fileService: IFileService, installSource: string): Promise<void> {

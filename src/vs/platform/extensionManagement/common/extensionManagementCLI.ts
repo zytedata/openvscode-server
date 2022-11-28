@@ -165,18 +165,20 @@ export class ExtensionManagementCLI {
 	}
 
 	private async installVSIX(vsix: URI, installOptions: InstallOptions, force: boolean, output: CLIOutput): Promise<IExtensionManifest | null> {
-
-		const manifest = await this.extensionManagementService.getManifest(vsix);
-		if (!manifest) {
-			throw new Error('Invalid vsix');
+		let valid = true;
+		if (!(vsix.scheme === Schemas.http || vsix.scheme === Schemas.https)) {
+			const manifest = await this.extensionManagementService.getManifest(vsix);
+			if (!manifest) {
+				throw new Error('Invalid vsix');
+			}
+			valid = await this.validateVSIX(manifest, force, installOptions.profileLocation, output);
 		}
 
-		const valid = await this.validateVSIX(manifest, force, installOptions.profileLocation, output);
 		if (valid) {
 			try {
-				await this.extensionManagementService.install(vsix, installOptions);
+				const ext = await this.extensionManagementService.install(vsix, installOptions);
 				output.log(localize('successVsixInstall', "Extension '{0}' was successfully installed.", basename(vsix)));
-				return manifest;
+				return ext.manifest;
 			} catch (error) {
 				if (isCancellationError(error)) {
 					output.log(localize('cancelVsixInstall', "Cancelled installing extension '{0}'.", basename(vsix)));
