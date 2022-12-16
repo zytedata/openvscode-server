@@ -59,7 +59,9 @@
     "extensions-ci": "node --max_old_space_size=4095 ./node_modules/gulp/bin/gulp.js extensions-ci",
     "webview-generate-csp-hash": "npx github:apaatsio/csp-hash-from-html csp-hash ./src/vs/workbench/contrib/webview/browser/pre/index.html",
     "perf": "node scripts/code-perf.js",
-    "server:init": "yarn --cwd ./build compile && yarn compile && yarn download-builtin-extensions"
+    "server:init": "yarn --cwd ./build compile && yarn compile && yarn download-builtin-extensions",
+    "link:gitpod-web": "ln -s /workspace/gitpod-code/gitpod-web extensions/",
+    "unlink:gitpod-web": "rm extensions/gitpod-web"
   },
   "dependencies": {
     "@gitpod/gitpod-protocol": "main",
