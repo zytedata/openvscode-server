@@ -406,13 +406,6 @@ function tweakProductForServerWeb(product) {
 			const sourceFolderName = `out-vscode-${type}${dashed(minified)}`;
 			const destinationFolderName = `vscode-${type}${dashed(platform)}${dashed(arch)}`;
 
-			const serverTaskCI = task.define(`vscode-${type}${dashed(platform)}${dashed(arch)}${dashed(minified)}-ci`, task.series(
-				gulp.task(`node-${platform}-${arch}`),
-				util.rimraf(path.join(BUILD_ROOT, destinationFolderName)),
-				packageTask(type, platform, arch, sourceFolderName, destinationFolderName)
-			));
-			gulp.task(serverTaskCI);
-
 			/**
 			 * This dummy extension is a mock the for built-in extension called `github-authentication`.
 			 * In Gitpod we don't use the built-in extension (it's implemented inside gitpod-web extension)
@@ -459,15 +452,20 @@ function tweakProductForServerWeb(product) {
 				done();
 			});
 
-			gulp.task(createDummyGitHubAuthExtensionTask);
+			const serverTaskCI = task.define(`vscode-${type}${dashed(platform)}${dashed(arch)}${dashed(minified)}-ci`, task.series(
+				gulp.task(`node-${platform}-${arch}`),
+				util.rimraf(path.join(BUILD_ROOT, destinationFolderName)),
+				packageTask(type, platform, arch, sourceFolderName, destinationFolderName),
+				createDummyGitHubAuthExtensionTask
+			));
+			gulp.task(serverTaskCI);
 
 			const serverTask = task.define(`vscode-${type}${dashed(platform)}${dashed(arch)}${dashed(minified)}`, task.series(
 				compileBuildTask,
 				compileExtensionsBuildTask,
 				compileExtensionMediaBuildTask,
 				minified ? minifyTask : optimizeTask,
-				serverTaskCI,
-				createDummyGitHubAuthExtensionTask
+				serverTaskCI
 			));
 			gulp.task(serverTask);
 		});
