@@ -674,9 +674,7 @@
 		},
 		{
 			"files": [
-				"build/gulpfile.gitpod.js",
-				"src/vs/gitpod/*",
-				"extensions/gitpod*/**"
+				"src/vs/gitpod/*"
 			],
 			"rules": {
 				"header/header": [
