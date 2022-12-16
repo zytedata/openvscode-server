@@ -11,7 +11,7 @@ tasks:
       gp sync-done init
       export NODE_ENV=development
       export VSCODE_DEV=1
-      yarn gulp watch-init
+      yarn gulp watch
     name: watch app
   - command: |
       export NODE_ENV=development
@@ -34,3 +34,7 @@ vscode:
   extensions:
     - dbaeumer.vscode-eslint
     - svelte.svelte-vscode
+additionalRepositories:
+  - url: https://github.com/gitpod-io/gitpod-code
+    checkoutLocation: gitpod-code
+workspaceLocation: openvscode-server/main.code-workspace
