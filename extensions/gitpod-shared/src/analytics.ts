@@ -4,8 +4,7 @@
 
 import path from 'path';
 import * as vscode from 'vscode';
-
-import { GitpodExtensionContext } from './features';
+import { GitpodExtensionContext } from './gitpodContext';
 
 export interface BaseGitpodAnalyticsEventPropeties {
 	sessionId: string;
@@ -48,6 +47,11 @@ export type GitpodAnalyticsEvent =
 	}> |
 	GAET<'ide_close_signal', {
 		clientKind: 'vscode';
+	}> |
+	GAET<'vscode_execute_command_inner_loop', {
+		action: 'build' | 'run' | 'feedback' | 'learn';
+		location: 'codelens' | 'editorContext' | 'editorTitle';
+		source: 'gitpodYml' | 'dockerfile';
 	}>;
 
 export function registerUsageAnalytics(context: GitpodExtensionContext): void {
