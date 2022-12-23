@@ -47,6 +47,11 @@ export type GitpodAnalyticsEvent =
 	}> |
 	GAET<'ide_close_signal', {
 		clientKind: 'vscode';
+	}> |
+	GAET<'vscode_execute_command_inner_loop', {
+		action: 'build' | 'run' | 'feedback' | 'learn';
+		location: 'codelens' | 'editorContext' | 'editorTitle';
+		source: 'gitpodYml' | 'dockerfile';
 	}>;
 
 export function registerUsageAnalytics(context: GitpodExtensionContext): void {
