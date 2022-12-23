@@ -87,9 +87,6 @@ export function fromLocal(extensionPath: string, forWeb: boolean): Stream {
 
 
 function fromLocalWebpack(extensionPath: string, webpackConfigFileName: string): Stream {
-	const vsce = require('@vscode/vsce') as typeof import('@vscode/vsce');
-	const webpack = require('webpack');
-	const webpackGulp = require('webpack-stream');
 	const result = es.through();
 
 	const packagedDependencies: string[] = [];
@@ -102,6 +99,10 @@ function fromLocalWebpack(extensionPath: string, webpackConfigFileName: string):
 			}
 		}
 	}
+
+	const vsce = require('vsce') as typeof import('vsce');
+	const webpack = require('webpack');
+	const webpackGulp = require('webpack-stream');
 
 	vsce.listFiles({ cwd: extensionPath, packageManager: vsce.PackageManager.Yarn, packagedDependencies }).then(fileNames => {
 		const files = fileNames
@@ -182,8 +183,9 @@ function fromLocalWebpack(extensionPath: string, webpackConfigFileName: string):
 }
 
 function fromLocalNormal(extensionPath: string): Stream {
-	const vsce = require('@vscode/vsce') as typeof import('@vscode/vsce');
 	const result = es.through();
+
+	const vsce = require('vsce') as typeof import('vsce');
 
 	vsce.listFiles({ cwd: extensionPath, packageManager: vsce.PackageManager.Yarn })
 		.then(fileNames => {
