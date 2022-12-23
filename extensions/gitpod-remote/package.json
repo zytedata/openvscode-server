@@ -157,6 +157,26 @@
         "command": "gitpod.gitpodyml.run",
         "title": "%runGitpodYml%",
         "icon": "$(play)"
+      },
+      {
+        "command": "gitpod.gitpodyml.editorContext.build",
+        "title": "%buildGitpodYml%",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "gitpod.gitpodyml.editorContext.run",
+        "title": "%runGitpodYml%",
+        "icon": "$(play)"
+      },
+      {
+        "command": "gitpod.gitpodyml.editorTitle.build",
+        "title": "%buildGitpodYml%",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "gitpod.gitpodyml.editorTitle.run",
+        "title": "%runGitpodYml%",
+        "icon": "$(play)"
       }
     ],
     "menus": {
@@ -239,24 +259,24 @@
       ],
       "editor/context":[
         {
-          "command": "gitpod.gitpodyml.build",
+          "command": "gitpod.gitpodyml.editorContext.build",
           "when": "gitpod.run-gp.enabled && resourceFilename == '.gitpod.yml' && resourceScheme == file",
           "group": "0_navigation@0"
         },
         {
-          "command": "gitpod.gitpodyml.run",
+          "command": "gitpod.gitpodyml.editorContext.run",
           "when": "gitpod.run-gp.enabled && resourceFilename == '.gitpod.yml' && resourceScheme == file",
           "group": "0_navigation@0"
         }
       ],
       "editor/title":[
         {
-          "command": "gitpod.gitpodyml.build",
+          "command": "gitpod.gitpodyml.editorTitle.build",
           "when": "gitpod.run-gp.enabled && resourceFilename == '.gitpod.yml' && resourceScheme == file",
           "group": "navigation"
         },
         {
-          "command": "gitpod.gitpodyml.run",
+          "command": "gitpod.gitpodyml.editorTitle.run",
           "when": "gitpod.run-gp.enabled && resourceFilename == '.gitpod.yml' && resourceScheme == file",
           "group": "navigation"
         }
@@ -297,6 +317,22 @@
         {
           "command": "gitpod.gitpodyml.run",
           "when": "gitpod.run-gp.enabled"
+        },
+        {
+          "command": "gitpod.gitpodyml.editorContext.build",
+          "when": "false"
+        },
+        {
+          "command": "gitpod.gitpodyml.editorContext.run",
+          "when": "false"
+        },
+        {
+          "command": "gitpod.gitpodyml.editorTitle.build",
+          "when": "false"
+        },
+        {
+          "command": "gitpod.gitpodyml.editorTitle.run",
+          "when": "false"
         }
       ]
     },
