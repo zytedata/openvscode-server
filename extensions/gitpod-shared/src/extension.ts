@@ -38,7 +38,7 @@ export async function setupGitpodContext(context: vscode.ExtensionContext): Prom
 	registerWorkspaceTimeout(gitpodContext);
 	registerNotifications(gitpodContext);
 	registerDefaultLayout(gitpodContext);
-	gitpodContext.subscriptions.push(new GitpodCodelens(gitpodContext.gitpodYml));
+	gitpodContext.subscriptions.push(new GitpodCodelens(gitpodContext));
 
 	return gitpodContext;
 }
