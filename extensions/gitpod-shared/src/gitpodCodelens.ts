@@ -14,6 +14,8 @@ const BuildAction = {
 	shellCommand: 'gp-run --all-commands=false',
 
 	dockerfileCommand: 'gitpod.gitpodyml.dockerfile.build',
+	dockerfileEditorContextCommand: 'gitpod.gitpodyml.dockerfile.editorContext.build',
+	dockerfileEditorTitleCommand: 'gitpod.gitpodyml.dockerfile.editorTitle.build',
 	editorContextCommand: 'gitpod.gitpodyml.editorContext.build',
 	editorTitleCommand: 'gitpod.gitpodyml.editorTitle.build',
 };
@@ -24,6 +26,8 @@ const RunAction = {
 	shellCommand: 'gp-run',
 
 	dockerfileCommand: 'gitpod.gitpodyml.dockerfile.run',
+	dockerfileEditorContextCommand: 'gitpod.gitpodyml.dockerfile.editorContext.run',
+	dockerfileEditorTitleCommand: 'gitpod.gitpodyml.dockerfile.editorTitle.run',
 	editorContextCommand: 'gitpod.gitpodyml.editorContext.run',
 	editorTitleCommand: 'gitpod.gitpodyml.editorTitle.run',
 };
@@ -51,13 +55,13 @@ export class GitpodYamlCodelensProvider implements vscode.CodeLensProvider {
 	constructor() {
 	}
 
-	public setValidDockerFile(uri: vscode.Uri | undefined) {
+	public setDockerFile(uri: vscode.Uri | undefined) {
 		this.dockerFileUri = uri;
 	}
 
 	public provideCodeLenses(document: vscode.TextDocument, _tkn: vscode.CancellationToken): vscode.CodeLens[] {
 		const isDockerFile = document.fileName.endsWith('Dockerfile');
-		if (!this.dockerFileUri || isDockerFile && document.uri.fsPath !== this.dockerFileUri.fsPath) {
+		if (isDockerFile && (!this.dockerFileUri || document.uri.fsPath !== this.dockerFileUri.fsPath)) {
 			return [];
 		}
 
@@ -101,6 +105,8 @@ export class GitpodCodelens extends vscode.Disposable {
 
 	private codelensProvider = new GitpodYamlCodelensProvider();
 
+	private dockerFileUri: vscode.Uri | undefined;
+
 	private async initiateUserTask(taskAction: typeof BuildAction) {
 		const allTasksExecutions = vscode.tasks.taskExecutions;
 		const isTaskRunning = allTasksExecutions.find(task => task.task.source === taskAction.command);
@@ -134,6 +140,10 @@ export class GitpodCodelens extends vscode.Disposable {
 
 		this.disposables.push(this.context.gitpodYml.onDidChangeGitpodYml(() => {
 			this.updateDockerFile();
+		}));
+		this.disposables.push(vscode.window.onDidChangeActiveTextEditor((editor) => {
+			const isGitpodDockerfile = !!editor && !!this.dockerFileUri && editor.document.uri.fsPath === this.dockerFileUri.fsPath;
+			vscode.commands.executeCommand('setContext', 'gitpod.run-gp.dockerfile', isGitpodDockerfile);
 		}));
 	}
 
@@ -261,6 +271,28 @@ export class GitpodCodelens extends vscode.Disposable {
 			});
 			await this.initiateUserTask(RunAction);
 		}));
+		this.disposables.push(vscode.commands.registerCommand(BuildAction.dockerfileEditorContextCommand, async () => {
+			this.context.fireAnalyticsEvent({
+				eventName: 'vscode_execute_command_inner_loop',
+				properties: {
+					action: 'build',
+					location: 'editorContext',
+					source: 'dockerfile'
+				}
+			});
+			await this.initiateUserTask(BuildAction);
+		}));
+		this.disposables.push(vscode.commands.registerCommand(RunAction.dockerfileEditorContextCommand, async () => {
+			this.context.fireAnalyticsEvent({
+				eventName: 'vscode_execute_command_inner_loop',
+				properties: {
+					action: 'run',
+					location: 'editorContext',
+					source: 'dockerfile'
+				}
+			});
+			await this.initiateUserTask(RunAction);
+		}));
 		this.disposables.push(vscode.commands.registerCommand(BuildAction.editorTitleCommand, async () => {
 			this.context.fireAnalyticsEvent({
 				eventName: 'vscode_execute_command_inner_loop',
@@ -283,6 +315,28 @@ export class GitpodCodelens extends vscode.Disposable {
 			});
 			await this.initiateUserTask(RunAction);
 		}));
+		this.disposables.push(vscode.commands.registerCommand(BuildAction.dockerfileEditorTitleCommand, async () => {
+			this.context.fireAnalyticsEvent({
+				eventName: 'vscode_execute_command_inner_loop',
+				properties: {
+					action: 'build',
+					location: 'editorTitle',
+					source: 'dockerfile'
+				}
+			});
+			await this.initiateUserTask(BuildAction);
+		}));
+		this.disposables.push(vscode.commands.registerCommand(RunAction.dockerfileEditorTitleCommand, async () => {
+			this.context.fireAnalyticsEvent({
+				eventName: 'vscode_execute_command_inner_loop',
+				properties: {
+					action: 'run',
+					location: 'editorTitle',
+					source: 'dockerfile'
+				}
+			});
+			await this.initiateUserTask(RunAction);
+		}));
 	}
 
 	private async updateDockerFile() {
@@ -290,10 +344,11 @@ export class GitpodCodelens extends vscode.Disposable {
 		const dockerfile = yaml.document.getIn(['image', 'file']);
 		if (dockerfile) {
 			const dir = path.posix.dirname(this.context.gitpodYml.uri.path);
-			this.codelensProvider.setValidDockerFile(this.context.gitpodYml.uri.with({ path: path.join(dir, dockerfile) }));
+			this.dockerFileUri = this.context.gitpodYml.uri.with({ path: path.join(dir, dockerfile) });
 		} else {
-			this.codelensProvider.setValidDockerFile(undefined);
+			this.dockerFileUri = undefined;
 		}
+		this.codelensProvider.setDockerFile(this.dockerFileUri);
 	}
 
 	override dispose() {
