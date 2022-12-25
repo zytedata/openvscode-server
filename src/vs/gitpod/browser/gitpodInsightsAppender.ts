@@ -32,7 +32,7 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 		};
 		this.galleryHost = this.productService.extensionsGallery?.serviceUrl ? new URL(this.productService.extensionsGallery?.serviceUrl).host : undefined;
 
-		window.gitpod?.service.server.getLoggedInUser().then((user) => {
+		window.gitpod?.service?.server.getLoggedInUser().then((user) => {
 			this.gitpodUserId = user.id;
 		}).catch((e) => {
 			console.error('failed to get gitpodUserId', e);
