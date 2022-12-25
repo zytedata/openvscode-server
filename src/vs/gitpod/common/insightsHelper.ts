@@ -19,7 +19,7 @@ export interface ReportErrorParam {
 	userId: string;
 	component: string;
 	version: string;
-	properties?: Record<string, any>;
+	properties?: Record<string, string | undefined>;
 }
 
 function getEventName(name: string) {
@@ -106,8 +106,6 @@ export function mapTelemetryData(source: 'window' | 'remote-server', eventName: 
 					properties: {
 						kind: operation,
 						extensionId: data.id,
-						workspaceId: data.workspaceId,
-						workspaceInstanceId: data.workspaceInstanceId,
 						sessionID: data.sessionID,
 						timestamp: data.timestamp,
 						success: data.success,
@@ -126,8 +124,6 @@ export function mapTelemetryData(source: 'window' | 'remote-server', eventName: 
 					event: 'vscode_file_access',
 					properties: {
 						kind: 'read',
-						workspaceId: data.workspaceId,
-						workspaceInstanceId: data.workspaceInstanceId,
 						sessionID: data.sessionID,
 						timestamp: data.timestamp
 					},
@@ -141,8 +137,6 @@ export function mapTelemetryData(source: 'window' | 'remote-server', eventName: 
 					event: 'vscode_file_access',
 					properties: {
 						kind: 'write',
-						workspaceId: data.workspaceId,
-						workspaceInstanceId: data.workspaceInstanceId,
 						sessionID: data.sessionID,
 						timestamp: data.timestamp
 					},
@@ -154,8 +148,6 @@ export function mapTelemetryData(source: 'window' | 'remote-server', eventName: 
 						action: 'show',
 						notificationId: data.id,
 						source: data.source,
-						workspaceId: data.workspaceId,
-						workspaceInstanceId: data.workspaceInstanceId,
 						sessionID: data.sessionID,
 						timestamp: data.timestamp
 					},
@@ -167,8 +159,6 @@ export function mapTelemetryData(source: 'window' | 'remote-server', eventName: 
 						action: 'close',
 						notificationId: data.id,
 						source: data.source,
-						workspaceId: data.workspaceId,
-						workspaceInstanceId: data.workspaceInstanceId,
 						sessionID: data.sessionID,
 						timestamp: data.timestamp
 					},
@@ -180,8 +170,6 @@ export function mapTelemetryData(source: 'window' | 'remote-server', eventName: 
 						action: 'hide',
 						notificationId: data.id,
 						source: data.source,
-						workspaceId: data.workspaceId,
-						workspaceInstanceId: data.workspaceInstanceId,
 						sessionID: data.sessionID,
 						timestamp: data.timestamp
 					},
@@ -194,8 +182,6 @@ export function mapTelemetryData(source: 'window' | 'remote-server', eventName: 
 						notificationId: data.id,
 						source: data.source,
 						actionLabel: data.actionLabel,
-						workspaceId: data.workspaceId,
-						workspaceInstanceId: data.workspaceInstanceId,
 						sessionID: data.sessionID,
 						timestamp: data.timestamp
 					},
@@ -206,8 +192,6 @@ export function mapTelemetryData(source: 'window' | 'remote-server', eventName: 
 					properties: {
 						key: data.key,
 						target: data.target,
-						workspaceId: data.workspaceId,
-						workspaceInstanceId: data.workspaceInstanceId,
 						sessionID: data.sessionID,
 						timestamp: data.timestamp
 					},
@@ -219,8 +203,6 @@ export function mapTelemetryData(source: 'window' | 'remote-server', eventName: 
 						kind: 'action_executed',
 						command: data.command,
 						argument: data.argument,
-						workspaceId: data.workspaceId,
-						workspaceInstanceId: data.workspaceInstanceId,
 						sessionID: data.sessionID,
 						timestamp: data.timestamp
 					},
@@ -233,8 +215,6 @@ export function mapTelemetryData(source: 'window' | 'remote-server', eventName: 
 					event: 'vscode_getting_started',
 					properties: {
 						kind: 'editor_closed',
-						workspaceId: data.workspaceId,
-						workspaceInstanceId: data.workspaceInstanceId,
 						sessionID: data.sessionID,
 						timestamp: data.timestamp
 					},

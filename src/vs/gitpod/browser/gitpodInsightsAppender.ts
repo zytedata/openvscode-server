@@ -14,12 +14,11 @@ import type { ErrorEvent } from 'vs/platform/telemetry/common/errorTelemetry';
 
 type SendMetrics = (metrics: IDEMetric[]) => Promise<void>;
 type ErrorReports = (errors: ReportErrorParam) => Promise<void>;
-interface SupervisorWorkspaceInfo { gitpodHost: string; instanceId: string; workspaceId: string }
+interface SupervisorWorkspaceInfo { gitpodHost: string; instanceId: string; workspaceId: string; debugWorkspaceType?: 'noDebug' | 'regular' | 'prebuild'; ownerId: string }
 
 export class GitpodInsightsAppender implements ITelemetryAppender {
 	private readonly _baseProperties: { appName: string; uiKind: 'web'; version: string };
 	private readonly devMode = this.productService.nameShort.endsWith(' Dev');
-	private gitpodUserId: string | undefined;
 	private galleryHost: string | undefined;
 
 	constructor(
@@ -31,17 +30,6 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 			version: this.productService.version,
 		};
 		this.galleryHost = this.productService.extensionsGallery?.serviceUrl ? new URL(this.productService.extensionsGallery?.serviceUrl).host : undefined;
-		const pendingGitpodUserId = (async () => {
-			if (window.gitpod.loggedUserID) {
-				this.gitpodUserId = window.gitpod.loggedUserID;
-			} else {
-				const user = await window.gitpod?.service.server.getLoggedInUser();
-				this.gitpodUserId = user.id;
-			}
-		})();
-		pendingGitpodUserId.then().catch(e => {
-			console.error('failed to get gitpodUserId', e);
-		});
 	}
 
 	public log(eventName: string, data: any): void {
@@ -125,12 +113,13 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 			workspaceId: gitpodWsInfo.workspaceId,
 			instanceId: gitpodWsInfo.instanceId,
 			errorStack: error.callstack,
-			userId: this.gitpodUserId ?? '',
+			userId: window.gitpod.loggedUserID || gitpodWsInfo.ownerId,
 			component: 'vscode-web',
 			version: this._baseProperties.version,
 			properties: {
 				error_name: error.uncaught_error_name,
 				error_message: error.msg,
+				debug_workspace: String(!!gitpodWsInfo.debugWorkspaceType && gitpodWsInfo.debugWorkspaceType !== 'noDebug'),
 				...this._baseProperties,
 			}
 		};
@@ -184,7 +173,9 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 			return {
 				gitpodHost: this.devMode ? this.productService.gitpodPreview?.host ?? 'gitpod-staging.com' : new URL(info.gitpodHost).host,
 				instanceId: info.instanceId,
-				workspaceId: info.workspaceId
+				workspaceId: info.workspaceId,
+				debugWorkspaceType: info.debugWorkspaceType,
+				ownerId: info.ownerId
 			};
 		})();
 	}
