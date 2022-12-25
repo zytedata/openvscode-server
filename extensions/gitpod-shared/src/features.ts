@@ -10,7 +10,7 @@ import { JsonRpcProxyFactory } from '@gitpod/gitpod-protocol/lib/messaging/proxy
 import { NavigatorContext } from '@gitpod/gitpod-protocol/lib/protocol';
 import { ErrorCodes } from '@gitpod/gitpod-protocol/lib/messaging/error';
 import { GitpodHostUrl } from '@gitpod/gitpod-protocol/lib/util/gitpod-host-url';
-import { WorkspaceInfoRequest } from '@gitpod/supervisor-api-grpc/lib/info_pb';
+import { WorkspaceInfoRequest, DebugWorkspaceType } from '@gitpod/supervisor-api-grpc/lib/info_pb';
 import { NotifyRequest, NotifyResponse, RespondRequest, SubscribeRequest, SubscribeResponse } from '@gitpod/supervisor-api-grpc/lib/notification_pb';
 import { TasksStatusRequest, TasksStatusResponse, TaskState, TaskStatus } from '@gitpod/supervisor-api-grpc/lib/status_pb';
 import { ListenTerminalRequest, ListenTerminalResponse, ListTerminalsRequest, SetTerminalSizeRequest, ShutdownTerminalRequest, Terminal as SupervisorTerminal, TerminalSize as SupervisorTerminalSize, WriteTerminalRequest } from '@gitpod/supervisor-api-grpc/lib/terminal_pb';
@@ -99,18 +99,18 @@ export async function createGitpodExtensionContext(context: vscode.ExtensionCont
 	})();
 
 	const pendingGetOwner = gitpodService.server.getLoggedInUser();
-	const pendingGetUser = (async () => {
+	const pendingGetUserId = (async () => {
 		if (devMode || vscode.env.uiKind !== vscode.UIKind.Web) {
-			return pendingGetOwner;
+			return (await pendingGetOwner).id;
 		}
-		return vscode.commands.executeCommand('gitpod.api.getLoggedInUser') as typeof pendingGetOwner;
+		return vscode.commands.executeCommand('gitpod.api.getLoggedInUser') as Promise<string>;
 	})();
 	const pendingGetUserTeams = gitpodService.server.getTeams();
 	const pendingInstanceListener = gitpodService.listenToInstance(workspaceId);
 	const pendingWorkspaceOwned = (async () => {
 		const owner = await pendingGetOwner;
-		const user = await pendingGetUser;
-		const workspaceOwned = owner.id === user.id;
+		const userId = await pendingGetUserId;
+		const workspaceOwned = owner.id === userId;
 		vscode.commands.executeCommand('setContext', 'gitpod.workspaceOwned', workspaceOwned);
 		return workspaceOwned;
 	})();
@@ -126,7 +126,6 @@ export async function createGitpodExtensionContext(context: vscode.ExtensionCont
 		pendingWillCloseSocket,
 		workspaceInfo,
 		pendingGetOwner,
-		pendingGetUser,
 		pendingGetUserTeams,
 		pendingInstanceListener,
 		pendingWorkspaceOwned,
@@ -211,7 +210,8 @@ export async function registerWorkspaceCommands(context: GitpodExtensionContext)
 				query: JSON.stringify({
 					instanceId: context.info.getInstanceId(),
 					workspaceId: context.info.getWorkspaceId(),
-					gitpodHost: context.info.getGitpodHost()
+					gitpodHost: context.info.getGitpodHost(),
+					debugWorkspace: context.info.getDebugWorkspaceType() > DebugWorkspaceType.NODEBUG
 				})
 			}));
 		}
