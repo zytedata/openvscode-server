@@ -143,7 +143,7 @@
 		<!-- Workbench Icon/Manifest/CSS -->
 		<link rel="icon" href="/favicon.ico" type="image/x-icon" />
 		<link rel="manifest" href="/manifest.json" />
-		<link data-name="vs/workbench/workbench.web.main" rel="stylesheet" href="./static/out/vs/workbench/workbench.web.main.css" onerror="onVsCodeWorkbenchError(event)">
+		<link data-name="vs/workbench/workbench.web.main" rel="stylesheet" href="{{WORKBENCH_WEB_BASE_URL}}/out/vs/workbench/workbench.web.main.css" onerror="onVsCodeWorkbenchError(event)">
 
 	</head>
 
@@ -152,14 +152,15 @@
 
 	<!-- Startup (do not modify order of script tags!) -->
 	<script type="text/javascript" src="/_supervisor/frontend/main.js" onerror="onVsCodeWorkbenchError(event)" charset="utf-8" crossorigin="anonymous"></script>
-	<script src="./static/out/vs/loader.js" onerror="onVsCodeWorkbenchError(event)" crossorigin="anonymous"></script>
-	<script src="./static/out/vs/webPackagePaths.js" onerror="onVsCodeWorkbenchError(event)" crossorigin="anonymous"></script>
+	<script src="{{WORKBENCH_WEB_BASE_URL}}/out/vs/loader.js" onerror="onVsCodeWorkbenchError(event)" crossorigin="anonymous"></script>
+	<script src="{{WORKBENCH_WEB_BASE_URL}}/out/vs/webPackagePaths.js" onerror="onVsCodeWorkbenchError(event)" crossorigin="anonymous"></script>
 	<script>
+		const baseUrl = new URL('{{WORKBENCH_WEB_BASE_URL}}', window.location.origin).toString();
 		Object.keys(self.webPackagePaths).map(function (key, index) {
-			self.webPackagePaths[key] = `${window.location.origin}/static/node_modules/${key}/${self.webPackagePaths[key]}`;
+			self.webPackagePaths[key] = `${baseUrl}/node_modules/${key}/${self.webPackagePaths[key]}`;
 		});
 		require.config({
-			baseUrl: `${window.location.origin}/static/out`,
+			baseUrl: `${baseUrl}/out`,
 			recordStats: true,
 			trustedTypesPolicy: window.trustedTypes?.createPolicy('amdLoader', {
 				createScriptURL(value) {
@@ -168,16 +169,16 @@
 			}),
 			paths: {
 				...self.webPackagePaths,
-				'@gitpod/local-app-api-grpcweb': `${window.location.origin}/static/node_modules/@gitpod/local-app-api-grpcweb/lib/localapp.js`,
-				'@improbable-eng/grpc-web': `${window.location.origin}/static/node_modules/@improbable-eng/grpc-web/dist/grpc-web-client.umd.js`,
-				'@zip.js/zipjs': `${window.location.origin}/static/node_modules/@zip.js/zip.js/dist/zip-no-worker-deflate.min.js`
+				'@gitpod/local-app-api-grpcweb': `${baseUrl}/node_modules/@gitpod/local-app-api-grpcweb/lib/localapp.js`,
+				'@improbable-eng/grpc-web': `${baseUrl}/node_modules/@improbable-eng/grpc-web/dist/grpc-web-client.umd.js`,
+				'@zip.js/zipjs': `${baseUrl}/node_modules/@zip.js/zip.js/dist/zip-no-worker-deflate.min.js`
 			}
 		});
 	</script>
 	<script>
 		performance.mark('code/willLoadWorkbenchMain');
 	</script>
-	<script src="./static/out/vs/workbench/workbench.web.main.nls.js" onerror="onVsCodeWorkbenchError(event)" crossorigin="anonymous"></script>
-	<script src="./static/out/vs/workbench/workbench.web.main.js" onerror="onVsCodeWorkbenchError(event)" crossorigin="anonymous"></script>
-	<script src="./static/out/vs/gitpod/browser/workbench/workbench.js" onerror="onVsCodeWorkbenchError(event)" crossorigin="anonymous"></script>
+	<script src="{{WORKBENCH_WEB_BASE_URL}}/out/vs/workbench/workbench.web.main.nls.js" onerror="onVsCodeWorkbenchError(event)" crossorigin="anonymous"></script>
+	<script src="{{WORKBENCH_WEB_BASE_URL}}/out/vs/workbench/workbench.web.main.js" onerror="onVsCodeWorkbenchError(event)" crossorigin="anonymous"></script>
+	<script src="{{WORKBENCH_WEB_BASE_URL}}/out/vs/gitpod/browser/workbench/workbench.js" onerror="onVsCodeWorkbenchError(event)" crossorigin="anonymous"></script>
 </html>
