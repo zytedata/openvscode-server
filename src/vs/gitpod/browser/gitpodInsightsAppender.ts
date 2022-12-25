@@ -35,7 +35,7 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 			if (window.gitpod.loggedUserID) {
 				this.gitpodUserId = window.gitpod.loggedUserID;
 			} else {
-				const user = await window.gitpod?.service.server.getLoggedInUser();
+				const user = await window.gitpod?.service?.server.getLoggedInUser();
 				this.gitpodUserId = user.id;
 			}
 		})();
