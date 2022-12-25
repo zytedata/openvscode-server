@@ -11,18 +11,18 @@
     google-protobuf "^3.19.1"
 
 "@gitpod/local-app-api-grpcweb@main":
-  version "0.1.5-main.1701"
-  resolved "https://registry.yarnpkg.com/@gitpod/local-app-api-grpcweb/-/local-app-api-grpcweb-0.1.5-main.1701.tgz#3f4f4203c4532b098d697c65799095c3d4add9d4"
-  integrity sha512-jNxTuvvgw0k71OPeZlbrgLkzAUop1iLoR+v3sqZIf1joPcMZGKjVlvM2lPIbAQFvH5lrI3+7/gQdz3BrwTXmng==
+  version "0.1.5-main.6346"
+  resolved "https://registry.yarnpkg.com/@gitpod/local-app-api-grpcweb/-/local-app-api-grpcweb-0.1.5-main.6346.tgz#e466974b2a011ecd80faf2b36d5d4c552c3919f1"
+  integrity sha512-OzSkNeHF0Lq0Tx15YD3z8L+9Xe3Nt+UI/nGITIz7s4/LVXjHv4CxR8toiB4b5wtkAPFkMg/LkfuXoKQU40VPjg==
   dependencies:
-    "@gitpod/supervisor-api-grpcweb" "0.1.5-main.1701"
+    "@gitpod/supervisor-api-grpcweb" "0.1.5-main.6346"
     "@improbable-eng/grpc-web" "0.14.0"
-    google-protobuf "^3.17.0"
+    google-protobuf "^3.19.1"
 
-"@gitpod/supervisor-api-grpcweb@0.1.5-main.1701":
-  version "0.1.5-main.1701"
-  resolved "https://registry.yarnpkg.com/@gitpod/supervisor-api-grpcweb/-/supervisor-api-grpcweb-0.1.5-main.1701.tgz#3518155576a6d95c26299c957ef638e10644000a"
-  integrity sha512-i5V6Y45UvKZcKc+xVOGThe0N4ltwLTUxtsrcrWw8nVen/FKGp/vA4sIMIh5bVT20rqWX8r3pLVFCRtndS43qKQ==
+"@gitpod/supervisor-api-grpcweb@0.1.5-main.6346":
+  version "0.1.5-main.6346"
+  resolved "https://registry.yarnpkg.com/@gitpod/supervisor-api-grpcweb/-/supervisor-api-grpcweb-0.1.5-main.6346.tgz#221ca525005335d38b18d978dba3f65fc7e1f887"
+  integrity sha512-d7MAWfe1EkPcbcGWS39yAgyRbL+nutunGewuUeETc/0mkqm0BGLb5dIkORni4Cs2dUhR3wd1U7RWJ+sFCRC3iw==
   dependencies:
     "@improbable-eng/grpc-web" "^0.14.0"
 
@@ -95,11 +95,6 @@ browser-headers@^0.4.1:
   version "0.4.1"
   resolved "https://registry.yarnpkg.com/browser-headers/-/browser-headers-0.4.1.tgz#4308a7ad3b240f4203dbb45acedb38dc2d65dd02"
   integrity sha512-CA9hsySZVo9371qEHjHZtYxV2cFtVj5Wj/ZHi8ooEsrtm4vOnl9Y9HmyYWk9q+05d7K3rdoAE0j3MVEFVvtQtg==
-
-google-protobuf@^3.17.0:
-  version "3.19.0"
-  resolved "https://registry.yarnpkg.com/google-protobuf/-/google-protobuf-3.19.0.tgz#97f474323c92f19fd6737af1bb792e396991e0b8"
-  integrity sha512-qXGAiv3OOlaJXJNeKOBKxbBAwjsxzhx+12ZdKOkZTsqsRkyiQRmr/nBkAkqnuQ8cmA9X5NVXvObQTpHVnXE2DQ==
 
 google-protobuf@^3.19.1:
   version "3.21.0"
