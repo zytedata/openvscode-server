@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@gitpod/gitpod-protocol": "main",
-    "@gitpod/supervisor-api-grpc": "jp-on-open",
+    "@gitpod/supervisor-api-grpc":"ak-rebuild-debug",
     "bufferutil": "^4.0.1",
     "js-yaml": "^4.1.0",
     "reconnecting-websocket": "^4.4.0",
