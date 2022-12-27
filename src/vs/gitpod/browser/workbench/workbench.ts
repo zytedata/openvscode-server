@@ -580,9 +580,14 @@ async function doStart(): Promise<IDisposable> {
 	// To make webviews work in development, go to file src/vs/workbench/contrib/webview/browser/pre/main.js
 	// and update `signalReady` method to bypass hostname check
 	const baseUri = FileAccess.asBrowserUri('');
-	const uuidUri = `${baseUri.scheme}://{{uuid}}.${info.workspaceClusterHost}${baseUri.path.replace(/^\/blobserve/, '').replace(/\/out\/$/, '')}`;
-	const webEndpointUrlTemplate = uuidUri;
-	const webviewEndpoint = devMode ? undefined : `${uuidUri}/out/vs/workbench/contrib/webview/browser/pre/`;
+	const basePath = baseUri.path.replace(/\/out\/$/, '');
+	let webEndpointUrlTemplate = `${baseUri.scheme}://{{uuid}}.${info.workspaceClusterHost}`;
+	if (baseUri.path.startsWith('/blobserve')) {
+		webEndpointUrlTemplate += basePath.replace(/^\/blobserve/, '');
+	} else {
+		webEndpointUrlTemplate += `/${remoteAuthority.split('.', 1)[0]}${basePath}`;
+	}
+	const webviewEndpoint = webEndpointUrlTemplate + '/out/vs/workbench/contrib/webview/browser/pre/';
 
 	const folderUri = info.workspaceLocationFolder
 		? URI.from({
@@ -1006,7 +1011,9 @@ async function doStart(): Promise<IDisposable> {
 					}
 				}
 			},
-			webEndpointUrlTemplate
+			webEndpointUrlTemplate,
+			commit: product.commit || '0000000',
+			quality: product.quality || 'insiders'
 		},
 		settingsSyncOptions: {
 			enabled: true,
