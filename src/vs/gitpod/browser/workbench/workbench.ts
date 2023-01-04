@@ -32,6 +32,7 @@ import { RemoteAuthorityResolverError, RemoteAuthorityResolverErrorCode } from '
 import { extractLocalHostUriMetaDataForPortMapping, isLocalhost, TunnelPrivacyId } from 'vs/platform/tunnel/common/tunnel';
 import { ColorScheme } from 'vs/platform/theme/common/theme';
 import type { TunnelOptions } from 'vscode';
+import { getRemoteServerRootPath } from 'vs/platform/remote/common/remoteHosts';
 
 const loadingGrpc = import('@improbable-eng/grpc-web');
 const loadingLocalApp = (async () => {
@@ -910,6 +911,15 @@ async function doStart(): Promise<IDisposable> {
 			}
 		},
 		workspaceProvider: WorkspaceProvider.create({ remoteAuthority, folderUri, workspaceUri }),
+		resourceUriProvider: (uri) => {
+			const query = `path=${encodeURIComponent(uri.path)}`;
+			return URI.from({
+				scheme: Schemas.https,
+				authority: '23000-' + remoteAuthority,
+				path: getRemoteServerRootPath(product) + '/' + Schemas.vscodeRemoteResource,
+				query
+			});
+		},
 		resolveExternalUri: async (uri) => {
 			const localhost = extractLocalHostUriMetaDataForPortMapping(uri);
 			if (!localhost) {

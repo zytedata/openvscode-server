@@ -169,6 +169,11 @@ class RemoteExtensionHostAgentServer extends Disposable implements IServerAPI {
 			if (requestOrigin && this._webEndpointOriginChecker.matches(requestOrigin)) {
 				responseHeaders['Access-Control-Allow-Origin'] = requestOrigin;
 			}
+			// test
+			if (requestOrigin) {
+				responseHeaders['Access-Control-Allow-Origin'] = requestOrigin;
+				responseHeaders['Access-Control-Allow-Credentials'] = 'true';
+			}
 			return serveFile(filePath, CacheControl.ETAG, this._logService, req, res, responseHeaders);
 		}
 

@@ -43,6 +43,10 @@ class ExtensionResourceLoaderService extends AbstractExtensionResourceLoaderServ
 			requestInit.mode = 'cors'; /* set mode to cors so that above headers are always passed */
 		}
 
+		if (uri.path.endsWith('/' + Schemas.vscodeRemoteResource)) {
+			requestInit.credentials = 'include';
+		}
+
 		const response = await fetch(uri.toString(true), requestInit);
 		if (response.status !== 200) {
 			this._logService.info(`Request to '${uri.toString(true)}' failed with status code ${response.status}`);
