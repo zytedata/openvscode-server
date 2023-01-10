@@ -868,7 +868,13 @@ async function doStart(): Promise<IDisposable> {
 			if (devMode) {
 				throw new Error('not supported in dev mode');
 			}
-			return window.gitpod.service.server.getLoggedInUser();
+			const pendingUser = (async () => {
+				if (window.gitpod.loggedUserID) {
+					return { id: window.gitpod.loggedUserID };
+				}
+				return await window.gitpod.service.server.getLoggedInUser();
+			})();
+			return pendingUser;
 		}
 	};
 
