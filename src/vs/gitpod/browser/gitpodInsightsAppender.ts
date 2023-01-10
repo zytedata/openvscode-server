@@ -31,10 +31,15 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 			version: this.productService.version,
 		};
 		this.galleryHost = this.productService.extensionsGallery?.serviceUrl ? new URL(this.productService.extensionsGallery?.serviceUrl).host : undefined;
-
-		window.gitpod?.service.server.getLoggedInUser().then((user) => {
-			this.gitpodUserId = user.id;
-		}).catch((e) => {
+		const pendingGitpodUserId = (async () => {
+			if (window.gitpod.loggedUserID) {
+				this.gitpodUserId = window.gitpod.loggedUserID;
+			} else {
+				const user = await window.gitpod?.service.server.getLoggedInUser();
+				this.gitpodUserId = user.id;
+			}
+		})();
+		pendingGitpodUserId.then().catch(e => {
 			console.error('failed to get gitpodUserId', e);
 		});
 	}
