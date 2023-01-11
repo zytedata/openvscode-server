@@ -12,6 +12,7 @@ export { GitpodExtensionContext } from './gitpodContext';
 export { registerTasks, registerIpcHookCli } from './features';
 
 export * from './common/utils';
+export { default as Log } from './common/logger';
 export * from './gitpod-plugin-model';
 export * from './workspacePort';
 

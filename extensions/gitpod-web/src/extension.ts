@@ -46,7 +46,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	registerIpcHookCli(gitpodContext);
 	registerExtensionManagement(gitpodContext);
 	registerWelcomeWalkthroughContribution(gitpodContext);
-	context.subscriptions.push(new ReleaseNotes(context));
+	context.subscriptions.push(new ReleaseNotes(context, gitpodContext.logger));
 
 	await gitpodContext.active;
 }
