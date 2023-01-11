@@ -8,6 +8,7 @@ import * as vscode from 'vscode';
 import { load } from 'js-yaml';
 import { CacheHelper } from './util/cache';
 import { Disposable, disposeAll } from './util/dispose';
+import { Log } from 'gitpod-shared';
 
 export class ReleaseNotes extends Disposable {
 	public static readonly viewType = 'gitpodReleaseNotes';
@@ -21,6 +22,7 @@ export class ReleaseNotes extends Disposable {
 
 	constructor(
 		private readonly context: vscode.ExtensionContext,
+		private readonly logger: Log,
 	) {
 		super();
 
@@ -126,6 +128,11 @@ export class ReleaseNotes extends Disposable {
 		}
 
 		const html = await vscode.commands.executeCommand<string>('markdown.api.render', mdContent);
+
+		if (!this.panel?.visible) {
+			return;
+		}
+
 		this.panel.webview.html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -158,7 +165,7 @@ export class ReleaseNotes extends Disposable {
 		if (showReleaseNotes) {
 			const releaseId = await this.getLastPublish();
 			if (releaseId && releaseId !== lastReadId) {
-				console.log(`gitpod release notes lastReadId: ${lastReadId}, latestReleaseId: ${releaseId}`);
+				this.logger.info(`gitpod release notes lastReadId: ${lastReadId}, latestReleaseId: ${releaseId}`);
 				this.createOrShow();
 			}
 		}
