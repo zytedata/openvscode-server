@@ -10,7 +10,7 @@ import { JsonRpcProxyFactory } from '@gitpod/gitpod-protocol/lib/messaging/proxy
 import { NavigatorContext } from '@gitpod/gitpod-protocol/lib/protocol';
 import { ErrorCodes } from '@gitpod/gitpod-protocol/lib/messaging/error';
 import { GitpodHostUrl } from '@gitpod/gitpod-protocol/lib/util/gitpod-host-url';
-import { WorkspaceInfoRequest } from '@gitpod/supervisor-api-grpc/lib/info_pb';
+import { WorkspaceInfoRequest, DebugWorkspaceType } from '@gitpod/supervisor-api-grpc/lib/info_pb';
 import { NotifyRequest, NotifyResponse, RespondRequest, SubscribeRequest, SubscribeResponse } from '@gitpod/supervisor-api-grpc/lib/notification_pb';
 import { TasksStatusRequest, TasksStatusResponse, TaskState, TaskStatus } from '@gitpod/supervisor-api-grpc/lib/status_pb';
 import { ListenTerminalRequest, ListenTerminalResponse, ListTerminalsRequest, SetTerminalSizeRequest, ShutdownTerminalRequest, Terminal as SupervisorTerminal, TerminalSize as SupervisorTerminalSize, WriteTerminalRequest } from '@gitpod/supervisor-api-grpc/lib/terminal_pb';
@@ -211,7 +211,8 @@ export async function registerWorkspaceCommands(context: GitpodExtensionContext)
 				query: JSON.stringify({
 					instanceId: context.info.getInstanceId(),
 					workspaceId: context.info.getWorkspaceId(),
-					gitpodHost: context.info.getGitpodHost()
+					gitpodHost: context.info.getGitpodHost(),
+					debugWorkspace: context.info.getDebugWorkspaceType() > DebugWorkspaceType.NODEBUG
 				})
 			}));
 		}
