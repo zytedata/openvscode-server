@@ -175,6 +175,7 @@ export class GitpodExtensionContext implements vscode.ExtensionContext {
 			sessionId: this.sessionId,
 			workspaceId: this.info.getWorkspaceId(),
 			instanceId: this.info.getInstanceId(),
+			debugWorkspace: typeof this.info['getDebugWorkspaceType'] === 'function' ? this.info.getDebugWorkspaceType() > 0 : false,
 			appName: vscode.env.appName,
 			uiKind: vscode.env.uiKind === vscode.UIKind.Web ? 'web' : 'desktop',
 			devMode: this.devMode,

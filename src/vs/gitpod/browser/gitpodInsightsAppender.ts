@@ -14,7 +14,7 @@ import type { ErrorEvent } from 'vs/platform/telemetry/common/errorTelemetry';
 
 type SendMetrics = (metrics: IDEMetric[]) => Promise<void>;
 type ErrorReports = (errors: ReportErrorParam) => Promise<void>;
-interface SupervisorWorkspaceInfo { gitpodHost: string; instanceId: string; workspaceId: string }
+interface SupervisorWorkspaceInfo { gitpodHost: string; instanceId: string; workspaceId: string; debugWorkspaceType?: 'noDebug' | 'regular' | 'prebuild' }
 
 export class GitpodInsightsAppender implements ITelemetryAppender {
 	private readonly _baseProperties: { appName: string; uiKind: 'web'; version: string };
@@ -131,6 +131,7 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 			properties: {
 				error_name: error.uncaught_error_name,
 				error_message: error.msg,
+				debug_workspace: String(!!gitpodWsInfo.debugWorkspaceType && gitpodWsInfo.debugWorkspaceType !== 'noDebug'),
 				...this._baseProperties,
 			}
 		};
@@ -184,7 +185,8 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 			return {
 				gitpodHost: this.devMode ? this.productService.gitpodPreview?.host ?? 'gitpod-staging.com' : new URL(info.gitpodHost).host,
 				instanceId: info.instanceId,
-				workspaceId: info.workspaceId
+				workspaceId: info.workspaceId,
+				debugWorkspaceType: info.debugWorkspaceType,
 			};
 		})();
 	}
