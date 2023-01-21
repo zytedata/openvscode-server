@@ -51,7 +51,13 @@ type GitpodConnection = Omit<GitpodServiceImpl<GitpodClient, GitpodServer>, 'ser
 export class GitpodInsightsAppender implements ITelemetryAppender {
 
 	private _asyncAIClient: Promise<GitpodConnection> | null;
-	private _defaultData: { [key: string]: any } = Object.create(null);
+	private _defaultData: {
+		workspaceId?: string;
+		instanceId?: string;
+		debugWorkspace?: boolean;
+		// TODO for backward compatibility with reports, we use instanceId in other places
+		workspaceInstanceId?: string;
+	} = {};
 	private _baseProperties: { appName: string; uiKind: 'web'; version: string };
 	private readonly supervisor = new SupervisorConnection();
 	private readonly devMode = this.productName.endsWith(' Dev');
@@ -83,7 +89,7 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 				(supervisorData) => {
 					this._defaultData['workspaceId'] = supervisorData.workspaceId;
 					this._defaultData['instanceId'] = supervisorData.instanceId;
-					// TODO for backward compatibility with reports, we use instanceId in other places
+					this._defaultData['debugWorkspace'] = supervisorData.debugWorkspaceType > 0;
 					this._defaultData['workspaceInstanceId'] = supervisorData.instanceId;
 
 					return this.getClient(this.productName, this.productVersion, supervisorData.serverToken, supervisorData.gitpodHost, supervisorData.gitpodApiEndpoint);
@@ -162,8 +168,8 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 
 	private async sendErrorReport(error: ErrorEvent): Promise<void> {
 		const req = new ReportErrorRequest();
-		req.setWorkspaceId(this._defaultData['workspaceId']);
-		req.setInstanceId(this._defaultData['instanceId']);
+		req.setWorkspaceId(this._defaultData['workspaceId']!);
+		req.setInstanceId(this._defaultData['instanceId']!);
 		req.setErrorStack(error.callstack);
 		if (this.gitpodUserId) {
 			req.setUserId(this.gitpodUserId);
@@ -175,6 +181,7 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 		req.getPropertiesMap().set('appName', this._baseProperties.appName);
 		req.getPropertiesMap().set('uiKind', this._baseProperties.uiKind);
 		req.getPropertiesMap().set('version', this._baseProperties.version);
+		req.getPropertiesMap().set('debug_workspace', String(this._defaultData.debugWorkspace!));
 
 		if (this.devMode) {
 			console.log('Gitpod Error Reports: ', JSON.stringify(req.toObject(), null, 2));
@@ -235,6 +242,7 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 		const gitpodHost = workspaceInfo.getGitpodHost();
 		const workspaceId = workspaceInfo.getWorkspaceId();
 		const instanceId = workspaceInfo.getInstanceId();
+		const debugWorkspaceType = typeof workspaceInfo['getDebugWorkspaceType'] === 'function' ? workspaceInfo.getDebugWorkspaceType() : 0;
 
 		const getTokenRequest = new GetTokenRequest();
 		getTokenRequest.setKind('gitpod');
@@ -255,6 +263,7 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 			gitpodApiEndpoint,
 			workspaceId,
 			instanceId,
+			debugWorkspaceType
 		};
 	}
 

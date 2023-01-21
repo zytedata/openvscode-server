@@ -19,7 +19,7 @@ export interface ReportErrorParam {
 	userId: string;
 	component: string;
 	version: string;
-	properties?: Record<string, any>;
+	properties?: Record<string, string | undefined>;
 }
 
 function getEventName(name: string) {

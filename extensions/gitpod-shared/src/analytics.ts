@@ -10,6 +10,7 @@ export interface BaseGitpodAnalyticsEventPropeties {
 	sessionId: string;
 	workspaceId: string;
 	instanceId: string;
+	debugWorkspace: boolean;
 	appName: string;
 	uiKind: 'web' | 'desktop';
 	devMode: boolean;
