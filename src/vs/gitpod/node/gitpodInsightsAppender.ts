@@ -54,7 +54,7 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 	private _defaultData: {
 		workspaceId?: string;
 		instanceId?: string;
-		debugWorkspace?: boolean;
+		debugWorkspace?: string;
 		// TODO for backward compatibility with reports, we use instanceId in other places
 		workspaceInstanceId?: string;
 	} = {};
@@ -89,7 +89,7 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 				(supervisorData) => {
 					this._defaultData['workspaceId'] = supervisorData.workspaceId;
 					this._defaultData['instanceId'] = supervisorData.instanceId;
-					this._defaultData['debugWorkspace'] = supervisorData.debugWorkspaceType > 0;
+					this._defaultData['debugWorkspace'] = String(supervisorData.debugWorkspaceType > 0);
 					this._defaultData['workspaceInstanceId'] = supervisorData.instanceId;
 
 					return this.getClient(this.productName, this.productVersion, supervisorData.serverToken, supervisorData.gitpodHost, supervisorData.gitpodApiEndpoint);
@@ -181,7 +181,7 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 		req.getPropertiesMap().set('appName', this._baseProperties.appName);
 		req.getPropertiesMap().set('uiKind', this._baseProperties.uiKind);
 		req.getPropertiesMap().set('version', this._baseProperties.version);
-		req.getPropertiesMap().set('debug_workspace', String(this._defaultData.debugWorkspace!));
+		req.getPropertiesMap().set('debug_workspace', this._defaultData.debugWorkspace!);
 
 		if (this.devMode) {
 			console.log('Gitpod Error Reports: ', JSON.stringify(req.toObject(), null, 2));
