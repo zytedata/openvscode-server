@@ -11,7 +11,7 @@ import { NavigatorContext } from '@gitpod/gitpod-protocol/lib/protocol';
 import { ErrorCodes } from '@gitpod/gitpod-protocol/lib/messaging/error';
 import { GitpodHostUrl } from '@gitpod/gitpod-protocol/lib/util/gitpod-host-url';
 import { WorkspaceInfoRequest, DebugWorkspaceType } from '@gitpod/supervisor-api-grpc/lib/info_pb';
-import { NotifyRequest, NotifyResponse, RespondRequest, SubscribeRequest, SubscribeResponse } from '@gitpod/supervisor-api-grpc/lib/notification_pb';
+import { NotifyRequest, NotifyResponse, RespondRequest, SubscribeActiveRequest, SubscribeActiveResponse, SubscribeRequest, SubscribeResponse, NotifyActiveRespondRequest, NotifyActiveResponse } from '@gitpod/supervisor-api-grpc/lib/notification_pb';
 import { TasksStatusRequest, TasksStatusResponse, TaskState, TaskStatus } from '@gitpod/supervisor-api-grpc/lib/status_pb';
 import { ListenTerminalRequest, ListenTerminalResponse, ListTerminalsRequest, SetTerminalSizeRequest, ShutdownTerminalRequest, Terminal as SupervisorTerminal, TerminalSize as SupervisorTerminalSize, WriteTerminalRequest } from '@gitpod/supervisor-api-grpc/lib/terminal_pb';
 import { GetTokenRequest } from '@gitpod/supervisor-api-grpc/lib/token_pb';
@@ -22,6 +22,7 @@ import * as path from 'path';
 import ReconnectingWebSocket from 'reconnecting-websocket';
 import { URL } from 'url';
 import * as util from 'util';
+import * as child_proces from 'child_process';
 import * as vscode from 'vscode';
 import { CancellationToken, ConsoleLogger, listen as doListen } from 'vscode-ws-jsonrpc';
 import WebSocket = require('ws');
@@ -438,6 +439,94 @@ export async function registerWorkspaceTimeout(context: GitpodExtensionContext):
 	context.subscriptions.push(listener.onDidChange(update));
 }
 
+export function registerActiveNotifications(context: GitpodExtensionContext): void {
+	let tokenSource = new vscode.CancellationTokenSource();
+	tokenSource.cancel();
+	context.subscriptions.push(new vscode.Disposable(() => tokenSource.cancel()));
+	const updateActiveNotifications = () => {
+		if (!vscode.window.state.focused) {
+			tokenSource.cancel();
+		} else if (tokenSource.token.isCancellationRequested) {
+			tokenSource = new vscode.CancellationTokenSource();
+			const toStop = observeActiveNotifications(context);
+			tokenSource.token.onCancellationRequested(() => toStop.dispose());
+		}
+	};
+	updateActiveNotifications();
+	context.subscriptions.push(vscode.window.onDidChangeWindowState(() => updateActiveNotifications()));
+}
+
+function observeActiveNotifications(context: GitpodExtensionContext): vscode.Disposable {
+	let run = true;
+	let stopUpdates: Function | undefined;
+	(async () => {
+		while (run) {
+			try {
+				const evts = context.supervisor.notification.subscribeActive(new SubscribeActiveRequest(), context.supervisor.metadata);
+				stopUpdates = evts.cancel.bind(evts);
+
+				await new Promise((resolve, reject) => {
+					evts.on('end', resolve);
+					evts.on('error', reject);
+					evts.on('data', async (result: SubscribeActiveResponse) => {
+						const request = result.getRequest();
+						// we deletage to code cli
+						// it delegates to the proper window cli server
+						// based on VSCODE_IPC_HOOK_CLI env var
+						try {
+							const preview = request?.getPreview();
+							if (preview) {
+								if (preview.getExternal()) {
+									await util.promisify(child_proces.exec)('code --openExternal ' + preview.getUrl());
+								} else {
+									await openSimpleBrowser(preview.getUrl());
+								}
+							}
+							const open = request?.getOpen();
+							if (open) {
+								let command = 'code ';
+								if (open.getAwait()) {
+									command += '--wait ';
+								}
+								command += open.getUrlsList().join(' ');
+								await util.promisify(child_proces.exec)(command);
+							}
+						} catch (e) {
+							console.error('failed to process supervisor active notificaiton:', e);
+						}
+						const respondRequest = new NotifyActiveRespondRequest();
+						respondRequest.setRequestid(result.getRequestid());
+						respondRequest.setResponse(new NotifyActiveResponse());
+						context.supervisor.notification.notifyActiveRespond(respondRequest, context.supervisor.metadata, {
+							deadline: Date.now() + context.supervisor.deadlines.normal
+						}, (error, _) => {
+							if (error?.code !== grpc.status.DEADLINE_EXCEEDED) {
+								reject(error);
+							}
+						});
+					});
+				});
+			} catch (err) {
+				if (isGRPCErrorStatus(err, grpc.status.UNIMPLEMENTED)) {
+					console.warn('supervisor does not implement the active notification server');
+					run = false;
+				} else if (!isGRPCErrorStatus(err, grpc.status.CANCELLED)) {
+					console.error('cannot maintain connection to supervisor', err);
+				}
+			} finally {
+				stopUpdates = undefined;
+			}
+			await new Promise(resolve => setTimeout(resolve, 1000));
+		}
+	})();
+	return new vscode.Disposable(() => {
+		run = false;
+		if (stopUpdates) {
+			stopUpdates();
+		}
+	});
+}
+
 export function registerNotifications(context: GitpodExtensionContext): void {
 	function observeNotifications(): vscode.Disposable {
 		let run = true;
@@ -551,10 +640,7 @@ function installCLIProxy(context: vscode.ExtensionContext, logger: Log): string 
 					// should be aligned with https://github.com/gitpod-io/vscode/blob/4d36a5dbf36870beda891e5dd94ccf087fdc7eb5/src/vs/workbench/api/node/extHostCLIServer.ts#L207-L207
 					try {
 						const { url } = data;
-						await vscode.commands.executeCommand('simpleBrowser.api.open', url, {
-							viewColumn: vscode.ViewColumn.Beside,
-							preserveFocus: true
-						});
+						openSimpleBrowser(url);
 						res.writeHead(200, { 'content-type': 'application/json' });
 						res.end(JSON.stringify(''));
 					} catch (e) {
@@ -584,6 +670,13 @@ function installCLIProxy(context: vscode.ExtensionContext, logger: Log): string 
 	});
 
 	return ipcHookCli;
+}
+
+async function openSimpleBrowser(url: string): Promise<void> {
+	await vscode.commands.executeCommand('simpleBrowser.api.open', url, {
+		viewColumn: vscode.ViewColumn.Beside,
+		preserveFocus: true
+	});
 }
 
 type TerminalOpenMode = 'tab-before' | 'tab-after' | 'split-left' | 'split-right' | 'split-top' | 'split-bottom';
