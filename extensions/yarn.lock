@@ -34,9 +34,9 @@
   integrity sha512-eQi9rosGNVQFJyJWV0HCA5WZae/qWIQME7s8/j8DMvnylfBv62Pbu+zJ2eUDqNf2O4u3WB+OEXyfkpBoe194sg==
 
 "@gitpod/gitpod-protocol@main":
-  version "0.1.5-main.6346"
-  resolved "https://registry.yarnpkg.com/@gitpod/gitpod-protocol/-/gitpod-protocol-0.1.5-main.6346.tgz#497ff7eb4db0730b7b0f11b1569806241add9f46"
-  integrity sha512-19b1dltXoE5aRwWiL/m/1X0LMzeMtJ8Tp1onckXYpK6vZO5+TyyZ8sAbH1vI6Dn3tGYmzI5wot4Z1k/nBwtLSw==
+  version "0.1.5-main.6354"
+  resolved "https://registry.yarnpkg.com/@gitpod/gitpod-protocol/-/gitpod-protocol-0.1.5-main.6354.tgz#0a5ed58179ca157485ca3f3fc54f4e1498af8576"
+  integrity sha512-s128cOtx+XPUPNnjFj2b+YDBLWFaya0ayn9X/1HY/2Ec8HqFE27lLhabM3J1Mela0SWnRTFZIswDfsZgr4cvzA==
   dependencies:
     "@types/react" "17.0.32"
     abort-controller-x "^0.4.0"
@@ -2397,13 +2397,6 @@ react@17.0.2:
   dependencies:
     loose-envify "^1.1.0"
     object-assign "^4.1.1"
-
-react@>=16.9.0:
-  version "18.2.0"
-  resolved "https://registry.yarnpkg.com/react/-/react-18.2.0.tgz#555bd98592883255fa00de14f1151a917b5d77d5"
-  integrity sha512-/3IjMdb2L9QbBdWiW5e3P2/npwMBaU9mHCSCUzNln0ZCYbcfTsGbTJrU/kGemdH2IWmB2ioZ+zkxtmq6g09fGQ==
-  dependencies:
-    loose-envify "^1.1.0"
 
 read-pkg@^3.0.0:
   version "3.0.0"
