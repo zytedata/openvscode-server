@@ -26,8 +26,8 @@
     "svelte-preprocess": "^4.0.0"
   },
   "dependencies": {
-    "@gitpod/gitpod-protocol": "main",
-    "@gitpod/supervisor-api-grpc":"ak-rebuild-debug",
+    "@gitpod/gitpod-protocol": "0.1.5-main.6346",
+    "@gitpod/supervisor-api-grpc":"0.1.5-ak-rebuild-debug.65",
     "bufferutil": "^4.0.1",
     "js-yaml": "^4.1.0",
     "reconnecting-websocket": "^4.4.0",
