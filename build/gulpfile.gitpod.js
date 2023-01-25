@@ -15,6 +15,9 @@ const util = require('./lib/util');
 const task = require('./lib/task');
 const rename = require('gulp-rename');
 const ext = require('./lib/extensions');
+const { compileBuildTask } = require('./gulpfile.compile');
+
+const exec = promisify(cp.exec);
 
 gulp.task(task.define('watch-init', require('./lib/compilation').watchTask('out', false)));
 
@@ -27,7 +30,7 @@ const bumpMarketplaceExtensions = task.define('bump-marketplace-extensions', () 
 		const newVersion = argv['new-version'];
 		console.log(newVersion);
 		return Promise.allSettled(marketplaceExtensions.map(async extensionName => {
-			const { stderr } = await promisify(cp.exec)(`yarn version --new-version ${newVersion} --cwd ${path.join(extensionsPath, extensionName)} --no-git-tag-version`, { encoding: 'utf8' });
+			const { stderr } = await exec(`yarn version --new-version ${newVersion} --cwd ${path.join(extensionsPath, extensionName)} --no-git-tag-version`, { encoding: 'utf8' });
 			if (stderr) {
 				throw new Error('failed to bump up version: ' + stderr);
 			}
@@ -36,7 +39,7 @@ const bumpMarketplaceExtensions = task.define('bump-marketplace-extensions', () 
 });
 
 const bundlePortsWebview = task.define('bundle-remote-ports-webview', async () => {
-	await promisify(cp.exec)(`yarn --cwd ${path.join(extensionsPath, 'gitpod-remote')} run build:webview`, { encoding: 'utf8' });
+	await exec(`yarn --cwd ${path.join(extensionsPath, 'gitpod-remote')} run build:webview`, { encoding: 'utf8' });
 	gulp.src([`${path.join(extensionsPath, 'gitpod-remote')}/public/**/*`]).pipe(gulp.dest(path.join(outMarketplaceExtensions, 'gitpod-remote/public/')));
 });
 gulp.task(bundlePortsWebview);
@@ -51,7 +54,7 @@ for (const extensionName of marketplaceExtensions) {
 	const bumpExtension = task.define('gitpod:bump-extension:' + extensionName, async () => {
 		if ('new-version' in argv && argv['new-version']) {
 			const newVersion = argv['new-version'];
-			const { stderr } = await promisify(cp.exec)(`yarn version --new-version ${newVersion} --cwd ${path.join(extensionsPath, extensionName)} --no-git-tag-version`, { encoding: 'utf8' });
+			const { stderr } = await exec(`yarn version --new-version ${newVersion} --cwd ${path.join(extensionsPath, extensionName)} --no-git-tag-version`, { encoding: 'utf8' });
 			if (stderr) {
 				throw new Error('failed to bump up version: ' + stderr);
 			}

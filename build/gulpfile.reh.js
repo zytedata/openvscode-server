@@ -471,6 +471,16 @@ function tweakProductForServerWeb(product) {
 				createDummyGitHubAuthExtensionTask
 			));
 			gulp.task(serverTask);
+
+			/* For optimized building in combination with vscode-web-min */
+			const serverTaskSkipCompileBuild = task.define(`vscode-${type}${dashed(platform)}${dashed(arch)}${dashed(minified)}-skip-compile-build`, task.series(
+				compileExtensionsBuildTask,
+				compileExtensionMediaBuildTask,
+				minified ? minifyTask : optimizeTask,
+				serverTaskCI,
+				createDummyGitHubAuthExtensionTask
+			));
+			gulp.task(serverTaskSkipCompileBuild);
 		});
 	});
 });
