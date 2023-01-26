@@ -19,7 +19,7 @@ const ext = require('./lib/extensions');
 gulp.task(task.define('watch-init', require('./lib/compilation').watchTask('out', false)));
 
 const extensionsPath = path.join(path.dirname(__dirname), 'extensions');
-const marketplaceExtensions = ['gitpod-remote'];
+const marketplaceExtensions = ['gitpod-remote', 'gitpod-web'];
 const outMarketplaceExtensions = 'out-gitpod-marketplace';
 const cleanMarketplaceExtensions = task.define('clean-gitpod-marketplace-extensions', util.rimraf(outMarketplaceExtensions));
 const bumpMarketplaceExtensions = task.define('bump-marketplace-extensions', () => {
@@ -67,16 +67,18 @@ for (const extensionName of marketplaceExtensions) {
 			).pipe(gulp.dest(outMarketplaceExtensions))
 	));
 	gulp.task(bundleExtension);
-	const publishExtension = task.define('gitpod:publish-extension:' + extensionName, task.series(
-		bundleExtension,
-		bundlePortsWebview,
-		() => vsce.publish(vsceParams)
-	));
-	gulp.task(publishExtension);
-	const packageExtension = task.define('gitpod:package-extension:' + extensionName, task.series(
-		bundleExtension,
-		bundlePortsWebview,
-		() => vsce.createVSIX(vsceParams)
-	));
-	gulp.task(packageExtension);
+	if (extensionName !== 'gitpod-web') {
+		const publishExtension = task.define('gitpod:publish-extension:' + extensionName, task.series(
+			bundleExtension,
+			bundlePortsWebview,
+			() => vsce.publish(vsceParams)
+		));
+		gulp.task(publishExtension);
+		const packageExtension = task.define('gitpod:package-extension:' + extensionName, task.series(
+			bundleExtension,
+			bundlePortsWebview,
+			() => vsce.createVSIX(vsceParams)
+		));
+		gulp.task(packageExtension);
+	}
 }
