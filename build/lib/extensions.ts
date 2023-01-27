@@ -32,7 +32,7 @@ const root = path.dirname(path.dirname(__dirname));
 const commit = getVersion(root);
 const sourceMappingURLBase = `https://ticino.blob.core.windows.net/sourcemaps/${commit}`;
 
-export function minifyExtensionResources(input: Stream): Stream {
+function minifyExtensionResources(input: Stream): Stream {
 	const jsonFilter = filter(['**/*.json', '**/*.code-snippets'], { restore: true });
 	return input
 		.pipe(jsonFilter)
@@ -62,7 +62,7 @@ function updateExtensionPackageJSON(input: Stream, update: (data: any) => any): 
 		.pipe(packageJsonFilter.restore);
 }
 
-export function fromLocal(extensionPath: string, forWeb: boolean): Stream {
+function fromLocal(extensionPath: string, forWeb: boolean): Stream {
 	const webpackConfigFileName = forWeb ? 'extension-browser.webpack.config.js' : 'extension.webpack.config.js';
 
 	const isWebPacked = fs.existsSync(path.join(extensionPath, webpackConfigFileName));
@@ -289,9 +289,6 @@ const excludedExtensions = [
 	'ms-vscode.node-debug',
 	'ms-vscode.node-debug2',
 	'github-authentication',
-	'gitpod-shared',
-	'gitpod-remote',
-	'gitpod',
 ];
 
 const marketplaceWebExtensionsExclude = new Set([
