@@ -64,7 +64,7 @@
     "unlink:gitpod-web": "rm extensions/gitpod-web"
   },
   "dependencies": {
-    "@gitpod/gitpod-protocol": "main",
+    "@gitpod/gitpod-protocol": "0.1.5-hw-desktop-ide.0",
     "@gitpod/ide-metrics-api-grpcweb": "^0.0.1-main.4780",
     "@gitpod/local-app-api-grpcweb": "main",
     "@gitpod/supervisor-api-grpc": "ak-rebuild-debug",
