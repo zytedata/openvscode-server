@@ -886,16 +886,18 @@ async function doStart(): Promise<IDisposable> {
 		}
 	};
 
+	vscode.env.getUriScheme().then(() => {
+		// Workbench ready
+		_state = 'ready';
+		onDidChangeEmitter.fire();
+	});
+
 	const connectionToken = vscode.window.withProgress<string>(
 		{
 			title: 'Setting up connection to workspace',
 			location: ProgressLocation.Notification
 		},
 		async () => {
-			// Workbench created in dom, so mark state as ready
-			_state = 'ready';
-			onDidChangeEmitter.fire();
-
 			await window.gitpod.connectionReady;
 			return '';
 		}
