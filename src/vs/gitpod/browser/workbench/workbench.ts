@@ -20,7 +20,7 @@ import { request } from 'vs/base/parts/request/browser/request';
 import { localize } from 'vs/nls';
 import product from 'vs/platform/product/common/product';
 import { isFolderToOpen, isWorkspaceToOpen } from 'vs/platform/window/common/window';
-import { commands, create } from 'vs/workbench/workbench.web.main';
+import * as vscode from 'vs/workbench/workbench.web.main';
 import { posix } from 'vs/base/common/path';
 import { ltrim } from 'vs/base/common/strings';
 import type { ICredentialsProvider } from 'vs/platform/credentials/common/credentials';
@@ -32,6 +32,7 @@ import { RemoteAuthorityResolverError, RemoteAuthorityResolverErrorCode } from '
 import { extractLocalHostUriMetaDataForPortMapping, isLocalhost, TunnelPrivacyId } from 'vs/platform/tunnel/common/tunnel';
 import { ColorScheme } from 'vs/platform/theme/common/theme';
 import type { TunnelOptions } from 'vscode';
+import { ProgressLocation } from 'vs/platform/progress/common/progress';
 
 const loadingGrpc = import('@improbable-eng/grpc-web');
 const loadingLocalApp = (async () => {
@@ -528,8 +529,6 @@ toStop.add({
 function start(): IDisposable {
 	doStart().then(toDoStop => {
 		toStop.add(toDoStop);
-		_state = 'ready';
-		onDidChangeEmitter.fire();
 	}, e => {
 		_failureCause = e;
 		_state = 'terminated';
@@ -683,7 +682,7 @@ async function doStart(): Promise<IDisposable> {
 			this.disposed = true;
 			if (close) {
 				try {
-					await commands.executeCommand('gitpod.api.closeTunnel', this.remoteAddress.port);
+					await vscode.commands.executeCommand('gitpod.api.closeTunnel', this.remoteAddress.port);
 				} catch (e) {
 					console.error('failed to close tunnel', e);
 				}
@@ -698,7 +697,7 @@ async function doStart(): Promise<IDisposable> {
 		const client = new LocalAppClient('http://localhost:' + apiPort, {
 			transport: grpc.WebsocketTransport()
 		});
-		commands.executeCommand('setContext', 'gitpod.localAppConnected', true);
+		vscode.commands.executeCommand('setContext', 'gitpod.localAppConnected', true);
 		let run = true;
 		let stopUpdates: Function | undefined;
 		let attempts = 0;
@@ -707,7 +706,7 @@ async function doStart(): Promise<IDisposable> {
 		(async () => {
 			while (run) {
 				if (attempts === maxAttempts) {
-					commands.executeCommand('setContext', 'gitpod.localAppConnected', false);
+					vscode.commands.executeCommand('setContext', 'gitpod.localAppConnected', false);
 					console.error(`could not connect to local app ${maxAttempts} times, giving up, use 'Gitpod: Connect to Local App' command to retry`);
 					return;
 				}
@@ -733,7 +732,7 @@ async function doStart(): Promise<IDisposable> {
 								if (!existing || existing.privacy !== tunnel.privacy) {
 									existing?.dispose(false);
 									tunnels.set(status.getRemotePort(), tunnel);
-									commands.executeCommand('gitpod.vscode.workspace.openTunnel', {
+									vscode.commands.executeCommand('gitpod.vscode.workspace.openTunnel', {
 										remoteAddress: tunnel.remoteAddress,
 										localAddressPort: tunnel.remoteAddress.port,
 										privacy: tunnel.privacy
@@ -838,7 +837,7 @@ async function doStart(): Promise<IDisposable> {
 				}
 				let tunnel = tunnels.get(remotePort);
 				if (!tunnel) {
-					await commands.executeCommand('gitpod.api.openTunnel', tunnelOptions, tunnelCreationOptions);
+					await vscode.commands.executeCommand('gitpod.api.openTunnel', tunnelOptions, tunnelCreationOptions);
 					tunnel = tunnels.get(remotePort) || await new Promise<Tunnel>(resolve => {
 						const toUnsubscribe = onDidChangeTunnels.event(() => {
 							const resolved = tunnels.get(remotePort);
@@ -887,8 +886,24 @@ async function doStart(): Promise<IDisposable> {
 		}
 	};
 
-	subscriptions.add(create(document.body, {
+	const connectionToken = vscode.window.withProgress<string>(
+		{
+			title: 'Setting up connection to workspace',
+			location: ProgressLocation.Notification
+		},
+		async () => {
+			// Workbench created in dom, so mark state as ready
+			_state = 'ready';
+			onDidChangeEmitter.fire();
+
+			await window.gitpod.connectionReady;
+			return '';
+		}
+	);
+
+	subscriptions.add(vscode.create(document.body, {
 		remoteAuthority,
+		connectionToken,
 		webviewEndpoint,
 		webSocketFactory: {
 			create: (url, debugLabel) => {
@@ -935,7 +950,7 @@ async function doStart(): Promise<IDisposable> {
 			if (tunnel) {
 				externalEndpoint = URI.parse('http://localhost:' + tunnel.status.localPort);
 			} else {
-				const publicUrl = (await commands.executeCommand('gitpod.resolveExternalPort', localhost.port)) as any as string;
+				const publicUrl = (await vscode.commands.executeCommand('gitpod.resolveExternalPort', localhost.port)) as any as string;
 				externalEndpoint = URI.parse(publicUrl);
 			}
 			return externalEndpoint.with({
