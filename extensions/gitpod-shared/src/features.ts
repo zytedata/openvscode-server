@@ -96,7 +96,6 @@ export class GitpodExtensionContext implements vscode.ExtensionContext {
 		readonly pendingWillCloseSocket: (() => Promise<void>)[],
 		readonly info: WorkspaceInfoResponse,
 		readonly owner: Promise<User>,
-		readonly user: Promise<User>,
 		readonly userTeams: Promise<Team[]>,
 		readonly instanceListener: Promise<WorkspaceInstanceUpdateListener>,
 		readonly workspaceOwned: Promise<boolean>,
@@ -300,18 +299,18 @@ export async function createGitpodExtensionContext(context: vscode.ExtensionCont
 	})();
 
 	const pendingGetOwner = gitpodService.server.getLoggedInUser();
-	const pendingGetUser = (async () => {
+	const pendingGetUserId = (async () => {
 		if (devMode || vscode.env.uiKind !== vscode.UIKind.Web) {
-			return pendingGetOwner;
+			return (await pendingGetOwner).id;
 		}
-		return vscode.commands.executeCommand('gitpod.api.getLoggedInUser') as typeof pendingGetOwner;
+		return vscode.commands.executeCommand('gitpod.api.getLoggedInUser') as Promise<string>;
 	})();
 	const pendingGetUserTeams = gitpodService.server.getTeams();
 	const pendingInstanceListener = gitpodService.listenToInstance(workspaceId);
 	const pendingWorkspaceOwned = (async () => {
 		const owner = await pendingGetOwner;
-		const user = await pendingGetUser;
-		const workspaceOwned = owner.id === user.id;
+		const userId = await pendingGetUserId;
+		const workspaceOwned = owner.id === userId;
 		vscode.commands.executeCommand('setContext', 'gitpod.workspaceOwned', workspaceOwned);
 		return workspaceOwned;
 	})();
@@ -329,7 +328,6 @@ export async function createGitpodExtensionContext(context: vscode.ExtensionCont
 		pendingWillCloseSocket,
 		workspaceInfo,
 		pendingGetOwner,
-		pendingGetUser,
 		pendingGetUserTeams,
 		pendingInstanceListener,
 		pendingWorkspaceOwned,

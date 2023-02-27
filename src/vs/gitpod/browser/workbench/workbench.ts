@@ -867,7 +867,17 @@ async function doStart(): Promise<IDisposable> {
 			if (devMode) {
 				throw new Error('not supported in dev mode');
 			}
-			return window.gitpod.service.server.getLoggedInUser();
+			return window.gitpod.loggedUserID;
+		}
+	};
+
+	const openDesktop: ICommand = {
+		id: 'gitpod.api.openDesktop',
+		handler: (url: string) => {
+			if (!url || url.length === 0) {
+				return;
+			}
+			return window.gitpod.openDesktopIDE(url);
 		}
 	};
 
@@ -1012,7 +1022,8 @@ async function doStart(): Promise<IDisposable> {
 		commands: [
 			getTunnels,
 			connectLocalApp,
-			getLoggedInUser
+			getLoggedInUser,
+			openDesktop,
 		]
 	}));
 	return subscriptions;
