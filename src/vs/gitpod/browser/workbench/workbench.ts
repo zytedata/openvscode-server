@@ -954,7 +954,7 @@ async function doStart(): Promise<IDisposable> {
 			// vscode uri is so buggy that if the query part of a url contains percent encoded '=' or '&', it will decode it internally and the url will be invalid forever
 			// using /=(.*)/s we can split only on the first ocurrence of '=' if the value also contains a '='
 			// sadly not the case if the value contains '&' as it's possible it could signal another query param
-			uri.query.split('&').map(s => s.split(/=(.*)/s)).forEach(([k, v]) => externalEndpoint.searchParams.append(k.replaceAll('+', ' '), v.replaceAll('+', ' ')));
+			uri.query.split('&').map(s => s.split(/=(.*)/s)).forEach(([k, v]) => !!k && externalEndpoint.searchParams.append(k.replaceAll('+', ' '), v?.replaceAll('+', ' ') || ''));
 			return externalEndpoint;
 		},
 		homeIndicator: {
