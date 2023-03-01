@@ -423,12 +423,12 @@ export function cleanData(data: Record<string, any>, cleanUpPatterns: RegExp[]):
 			let updatedProperty = value.replaceAll('%20', ' ');
 
 			// First we anonymize any possible file paths
-			updatedProperty = anonymizeFilePaths(updatedProperty, cleanUpPatterns);
+			/* updatedProperty =  */anonymizeFilePaths(updatedProperty, cleanUpPatterns);
 
-			// Then we do a simple regex replace with the defined patterns
-			for (const regexp of cleanUpPatterns) {
-				updatedProperty = updatedProperty.replace(regexp, '');
-			}
+			// // Then we do a simple regex replace with the defined patterns
+			// for (const regexp of cleanUpPatterns) {
+			// 	updatedProperty = updatedProperty.replace(regexp, '');
+			// }
 
 			// Lastly, remove commonly leaked PII
 			updatedProperty = removePropertiesWithPossibleUserInfo(updatedProperty);
