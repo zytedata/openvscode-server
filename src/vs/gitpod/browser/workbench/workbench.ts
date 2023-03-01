@@ -709,7 +709,7 @@ async function doStart(): Promise<IDisposable> {
 		const client = new LocalAppClient('http://localhost:' + apiPort, {
 			transport: grpc.WebsocketTransport()
 		});
-		commands.executeCommand('setContext', 'gitpod.localAppConnected', true);
+		commands.executeCommand('_setContext', 'gitpod.localAppConnected', true);
 		let run = true;
 		let stopUpdates: Function | undefined;
 		let attempts = 0;
@@ -718,7 +718,7 @@ async function doStart(): Promise<IDisposable> {
 		(async () => {
 			while (run) {
 				if (attempts === maxAttempts) {
-					commands.executeCommand('setContext', 'gitpod.localAppConnected', false);
+					commands.executeCommand('_setContext', 'gitpod.localAppConnected', false);
 					console.error(`could not connect to local app ${maxAttempts} times, giving up, use 'Gitpod: Connect to Local App' command to retry`);
 					return;
 				}
