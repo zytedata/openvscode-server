@@ -175,7 +175,7 @@ const optimizeVSCodeWebTask = task.define('optimize-vscode-web', task.series(
 const minifyVSCodeWebTask = task.define('minify-vscode-web', task.series(
 	optimizeVSCodeWebTask,
 	util.rimraf('out-vscode-web-min'),
-	optimize.minifyTask('out-vscode-web')
+	optimize.minifyTask('out-vscode-web', '.')
 ));
 gulp.task(minifyVSCodeWebTask);
 
