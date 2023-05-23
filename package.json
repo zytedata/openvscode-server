@@ -68,6 +68,7 @@
     "unlink:gitpod-web": "rm extensions/gitpod-web"
   },
   "dependencies": {
+    "@segment/analytics-node": "^1.0.0-beta.24",
     "@gitpod/gitpod-protocol": "main-gha",
     "@gitpod/ide-metrics-api-grpcweb": "main-gha",
     "@gitpod/local-app-api-grpcweb": "main-gha",

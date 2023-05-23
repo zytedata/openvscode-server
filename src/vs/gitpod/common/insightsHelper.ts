@@ -4,7 +4,6 @@
  *  Copyright (c) Gitpod. All rights reserved.
  *--------------------------------------------------------------------------------------------*/
 
-import { RemoteTrackMessage } from '@gitpod/gitpod-protocol/lib/analytics';
 import type { IDEMetric } from '@gitpod/ide-metrics-api-grpcweb/lib/index';
 import type { ErrorEvent } from 'vs/platform/telemetry/common/errorTelemetry';
 
@@ -96,7 +95,7 @@ function doMapMetrics(source: 'window' | 'remote-server', eventName: string, dat
 }
 
 // please don't send same metrics from browser window and remote server
-export function mapTelemetryData(source: 'window' | 'remote-server', eventName: string, data: any): RemoteTrackMessage | undefined {
+export function mapTelemetryData(source: 'window' | 'remote-server', eventName: string, data: any): { event: string; properties: { [key: string]: any } } | undefined {
 	if (source === 'remote-server') {
 		if (eventName.startsWith('extensionGallery:')) {
 			const operation = eventName.split(':')[1];
