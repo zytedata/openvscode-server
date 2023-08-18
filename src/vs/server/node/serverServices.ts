@@ -153,12 +153,11 @@ export async function setupServerServices(connectionToken: ServerConnectionToken
 	let oneDsAppender: ITelemetryAppender = NullAppender;
 	const isInternal = isInternalTelemetry(productService, configurationService);
 	if (supportsTelemetry(productService, environmentService)) {
-		if (productService.aiConfig && productService.aiConfig.ariaKey !== 'foo') {
+		oneDsAppender = new GitpodInsightsAppender(productService.nameShort, productService.version, productService.gitpodPreview, productService.extensionsGallery?.serviceUrl);
+		if (productService.aiConfig && !oneDsAppender) {
 			oneDsAppender = new OneDataSystemAppender(requestService, isInternal, eventPrefix, null, productService.aiConfig.ariaKey);
 			disposables.add(toDisposable(() => oneDsAppender?.flush())); // Ensure the AI appender is disposed so that it flushes remaining data
 		}
-
-		oneDsAppender = new GitpodInsightsAppender(productService.nameShort, productService.version, productService.gitpodPreview, productService.extensionsGallery?.serviceUrl);
 
 		const config: ITelemetryServiceConfig = {
 			appenders: [oneDsAppender],
