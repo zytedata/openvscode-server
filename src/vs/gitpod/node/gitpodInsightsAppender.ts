@@ -41,8 +41,8 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 	private galleryHost: string | undefined;
 
 	constructor(
-		productName: string,
 		private readonly segmentKey: string,
+		productName: string,
 		private readonly productVersion: string,
 		private readonly gitpodPreview?: IGitpodPreviewConfiguration,
 		readonly galleryServiceUrl?: string
@@ -66,7 +66,7 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 				};
 				if (this.segmentKey === 'untrusted-dummy-key') {
 					settings.host = gitpodHost;
-					settings.path = '/analytics' + settings.path;
+					settings.path = '/analytics/v1/batch';
 				}
 				return new Analytics(settings);
 			});
@@ -84,31 +84,25 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 	}
 
 	log(eventName: string, data?: any): void {
-		this.sendAnalytics(data, eventName);
-		this.sendMetrics(data, eventName);
+		this.sendAnalytics(eventName, data);
+		this.sendMetrics(eventName, data);
 		if (eventName === 'UnhandledError') {
-			if (data.fromBrowser) {
-				return;
-			}
 			this.sendErrorReport(data as ErrorEvent);
 		}
 	}
 
-	private async sendAnalytics(data: any, eventName: string): Promise<void> {
+	private async sendAnalytics(eventName: string, data: any): Promise<void> {
 		try {
 			const mappedEvent = await this.mapAnalytics(eventName, data);
 			if (!mappedEvent) {
 				return;
 			}
-			if (process.env['VSCODE_DEV']) {
-				if (this.gitpodPreview?.log?.analytics) {
-					console.log('Gitpod Analytics: ', JSON.stringify(mappedEvent, undefined, 2));
-				}
-			} else {
-				this._withAIClient((aiClient) => {
-					aiClient.track(mappedEvent);
-				});
+			if (process.env['VSCODE_DEV'] && this.gitpodPreview?.log?.analytics) {
+				console.log('Gitpod Analytics: ', JSON.stringify(mappedEvent, undefined, 2));
 			}
+			this._withAIClient((aiClient) => {
+				aiClient.track(mappedEvent);
+			});
 		} catch (e) {
 			console.error('failed to send IDE analytics:', e);
 		}
@@ -134,7 +128,7 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 		return { userId: ownerId, ...mappedEvent };
 	}
 
-	private async sendMetrics(data: any, eventName: string): Promise<void> {
+	private async sendMetrics(eventName: string, data: any): Promise<void> {
 		try {
 			const metrics = mapMetrics('remote-server', eventName, data, { galleryHost: this.galleryHost });
 			if (!metrics || !metrics.length) {
@@ -152,6 +146,17 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 		}
 	}
 
+	flush(): Promise<any> {
+		return new Promise(resolve => {
+			if (!this._asyncAIClient) {
+				return resolve(undefined);
+			}
+			this._asyncAIClient
+				.then(aiClient => aiClient.closeAndFlush({ timeout: 3000 }))
+				.finally(() => resolve(undefined));
+		});
+	}
+
 	private async sendErrorReport(error: ErrorEvent): Promise<void> {
 		const { workspaceId, instanceId, ownerId, debugWorkspaceType } = await this.getWorkspaceInfo();
 		const req = new ReportErrorRequest();
@@ -167,7 +172,7 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 		req.getPropertiesMap().set('uiKind', this._baseProperties.uiKind);
 		req.getPropertiesMap().set('debug_workspace', String(debugWorkspaceType > 0));
 
-		if (process.env['VSCODE_DEV']) {
+		if (process.env['VSCODE_DEV'] && this.gitpodPreview?.log?.errorReports) {
 			console.log('Gitpod Error Reports: ', JSON.stringify(req.toObject(), null, 2));
 		}
 		const client = await this.getMetricsClient();
@@ -180,44 +185,36 @@ export class GitpodInsightsAppender implements ITelemetryAppender {
 		}
 	}
 
-	flush(): Promise<any> {
-		return new Promise(resolve => {
-			if (!this._asyncAIClient) {
-				return resolve(undefined);
-			}
-			this._asyncAIClient
-				.then(aiClient => aiClient.closeAndFlush({ timeout: 3000 }))
-				.finally(() => resolve(undefined));
-		});
-	}
-
 	private _metricsClient: Promise<MetricsServiceClient | undefined> | undefined;
-	private getMetricsClient(): Promise<MetricsServiceClient | undefined> {
-		if (this._metricsClient) {
-			return this._metricsClient;
+	private async getMetricsClient() {
+		if (!this._metricsClient) {
+			this._metricsClient = (async () => {
+				let gitpodHost: string | undefined;
+				if (process.env['VSCODE_DEV']) {
+					gitpodHost = this.gitpodPreview?.host;
+				} else {
+					const info = await this.getWorkspaceInfo();
+					gitpodHost = new URL(info.gitpodHost).host;
+				}
+				if (!gitpodHost) {
+					return undefined;
+				}
+				const ideMetricsEndpoint = 'https://ide.' + gitpodHost + '/metrics-api';
+				return new MetricsServiceClient(ideMetricsEndpoint, { transport: NodeHttpTransport() });
+			})();
 		}
-		return this._metricsClient = (async () => {
-			let gitpodHost: string | undefined;
-			if (process.env['VSCODE_DEV']) {
-				gitpodHost = this.gitpodPreview?.host;
-			} else {
-				const info = await this.getWorkspaceInfo();
-				gitpodHost = new URL(info.gitpodHost).host;
-			}
-			if (!gitpodHost) {
-				return undefined;
-			}
-			const ideMetricsEndpoint = 'https://ide.' + gitpodHost + '/metrics-api';
-			return new MetricsServiceClient(ideMetricsEndpoint, { transport: NodeHttpTransport() });
-		})();
+
+		return this._metricsClient;
 	}
 
-	private _workspaceInfo: WorkspaceInfoResponse.AsObject | undefined;
+	private _workspaceInfo: Promise<WorkspaceInfoResponse.AsObject> | undefined;
 	private async getWorkspaceInfo() {
 		if (!this._workspaceInfo) {
-			this._workspaceInfo = (await util.promisify(this.supervisor.info.workspaceInfo.bind(this.supervisor.info, new WorkspaceInfoRequest(), this.supervisor.metadata, {
-				deadline: Date.now() + this.supervisor.deadlines.long
-			}))()).toObject();
+			this._workspaceInfo = (async () => {
+				return (await util.promisify(this.supervisor.info.workspaceInfo.bind(this.supervisor.info, new WorkspaceInfoRequest(), this.supervisor.metadata, {
+					deadline: Date.now() + this.supervisor.deadlines.long
+				}))()).toObject();
+			})();
 		}
 
 		return this._workspaceInfo;

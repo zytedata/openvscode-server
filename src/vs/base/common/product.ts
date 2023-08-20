@@ -128,7 +128,6 @@ export interface IProductConfiguration {
 	readonly openToWelcomeMainPage?: boolean;
 	readonly aiConfig?: {
 		readonly ariaKey: string;
-		readonly segmentKey: string;
 	};
 
 	readonly documentationUrl?: string;
@@ -188,6 +187,7 @@ export interface IProductConfiguration {
 
 	readonly commonlyUsedSettings?: string[];
 
+	readonly segmentKey: string;
 	readonly gitpodPreview?: IGitpodPreviewConfiguration;
 }
 

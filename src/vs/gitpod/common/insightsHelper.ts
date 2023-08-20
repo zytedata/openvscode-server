@@ -5,11 +5,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { IDEMetric } from '@gitpod/ide-metrics-api-grpcweb/lib/index';
-import type { ErrorEvent } from 'vs/platform/telemetry/common/errorTelemetry';
-
-export interface GitpodErrorEvent extends ErrorEvent {
-	fromBrowser?: boolean;
-}
 
 export interface ReportErrorParam {
 	workspaceId: string;
@@ -26,19 +21,12 @@ function getEventName(name: string) {
 	return str.charAt(0).toLowerCase() + str.slice(1);
 }
 
-// const formatEventName = (str: string) => {
-// 	return str
-// 		.replace(/^[A-Z]/g, letter => letter.toLowerCase())
-// 		.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)
-// 		.replace(/[^\w]/g, '_');
-// };
-
 let readAccessTracked = false;
 let writeAccessTracked = false;
 
 export function mapMetrics(source: 'window' | 'remote-server', eventName: string, data: any, extraData?: any): IDEMetric[] | undefined {
 	const maybeMetrics = doMapMetrics(source, eventName, data, extraData);
-	return maybeMetrics instanceof Array ? maybeMetrics : typeof maybeMetrics === 'object' ? [maybeMetrics] : undefined;
+	return Array.isArray(maybeMetrics) ? maybeMetrics : typeof maybeMetrics === 'object' ? [maybeMetrics] : undefined;
 }
 
 function doMapMetrics(source: 'window' | 'remote-server', eventName: string, data: any, extraData?: any): IDEMetric[] | IDEMetric | undefined {
