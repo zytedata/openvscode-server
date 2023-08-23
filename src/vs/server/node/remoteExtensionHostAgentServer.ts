@@ -41,7 +41,7 @@ import { determineServerConnectionToken, requestHasValidConnectionToken as httpR
 import { IServerEnvironmentService, ServerParsedArgs } from 'vs/server/node/serverEnvironmentService';
 import { setupServerServices, SocketServer } from 'vs/server/node/serverServices';
 import { CacheControl, serveError, serveFile, WebClientServer } from 'vs/server/node/webClientServer';
-// eslint-disable-next-line code-import-patterns
+// eslint-disable-next-line local/code-import-patterns
 import { handleGitpodCLIRequest } from 'vs/gitpod/node/customServerIntegration';
 
 const SHUTDOWN_TIMEOUT = 5 * 60 * 1000;

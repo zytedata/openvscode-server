@@ -282,8 +282,10 @@
 				"NODE_ENV": "development"
 			},
 			"args": [
+				"--host=127.0.0.1",
 				"--without-connection-token"
 			]
+		},
 		{
 			"type": "node",
 			"request": "launch",
