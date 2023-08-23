@@ -377,7 +377,7 @@ function sendToPort(args: PipeCommand | { type: 'preview'; url: string }, verbos
 	if (verbose) {
 		console.log(JSON.stringify(args, null, '  '));
 	}
-	return new Promise<string>(resolve => {
+	return new Promise<string>((resolve, reject) => {
 		const message = JSON.stringify(args);
 		if (!cliPort) {
 			console.log('Message ' + message);
@@ -386,14 +386,23 @@ function sendToPort(args: PipeCommand | { type: 'preview'; url: string }, verbos
 		}
 
 		const opts: _http.RequestOptions = {
-			hostname: 'localhost',
+			hostname: '127.0.0.1',
 			port: cliPort,
 			protocol: 'http:',
 			path: '/cli',
-			method: 'POST'
+			method: 'POST',
+			headers: {
+				'content-type': 'application/json',
+				'accept': 'application/json'
+			}
 		};
 
 		const req = _http.request(opts, res => {
+			if (res.headers['content-type'] !== 'application/json') {
+				reject('Error in response: Invalid content type: Expected \'application/json\', is: ' + res.headers['content-type']);
+				return;
+			}
+
 			const chunks: string[] = [];
 			res.setEncoding('utf8');
 			res.on('data', chunk => {
@@ -401,7 +410,17 @@ function sendToPort(args: PipeCommand | { type: 'preview'; url: string }, verbos
 			});
 			res.on('error', (err) => fatal('Error in response.', err));
 			res.on('end', () => {
-				resolve(chunks.join(''));
+				const content = chunks.join('');
+				try {
+					const obj = JSON.parse(content);
+					if (res.statusCode === 200) {
+						resolve(obj);
+					} else {
+						reject(obj);
+					}
+				} catch (e) {
+					reject('Error in response: Unable to parse response as JSON: ' + content);
+				}
 			});
 		});
 

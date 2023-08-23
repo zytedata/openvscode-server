@@ -1037,8 +1037,8 @@ async function doStart(): Promise<IDisposable> {
 				}
 			},
 			webEndpointUrlTemplate,
-			commit: product.commit || '0000000',
-			quality: product.quality || 'insiders'
+			commit: product.commit,
+			quality: product.quality
 		},
 		settingsSyncOptions: {
 			enabled: true,

@@ -1,4 +1,4 @@
-/* eslint-disable code-import-patterns */
+/* eslint-disable local/code-import-patterns */
 /* eslint-disable header/header */
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Gitpod. All rights reserved.
@@ -72,7 +72,7 @@ export function handleGitpodCLIRequest(pathname: string, req: http.IncomingMessa
 					method: req.method,
 					headers: req.headers
 				}, res2 => {
-					res.setHeader('Content-Type', 'application/json');
+					res.writeHead(res2.statusCode!, res2.headers);
 					res2.pipe(res);
 				}))
 			);
@@ -88,7 +88,10 @@ export function handleGitpodCLIRequest(pathname: string, req: http.IncomingMessa
 			port,
 			method: req.method,
 			path: pathname
-		}, res2 => res2.pipe(res)));
+		}, res2 => {
+			res.writeHead(res2.statusCode!, res2.headers);
+			res2.pipe(res);
+		}));
 		return true;
 	}
 	return false;
