@@ -37,6 +37,7 @@ const loadingGrpc = import('@improbable-eng/grpc-web');
 const loadingLocalApp = (async () => {
 	// load grpc-web before local-app, see https://github.com/gitpod-io/gitpod/issues/4448
 	await loadingGrpc;
+	// eslint-disable-next-line local/code-amd-node-module
 	return import('@gitpod/local-app-api-grpcweb');
 })();
 
@@ -1008,6 +1009,7 @@ async function doStart(): Promise<IDisposable> {
 			'workbench.colorTheme': 'Gitpod Light',
 			'workbench.preferredLightColorTheme': 'Gitpod Light',
 			'workbench.preferredDarkColorTheme': 'Gitpod Dark',
+			'window.commandCenter': false
 		},
 		urlCallbackProvider: new LocalStorageURLCallbackProvider('/vscode-extension-auth-callback'),
 		credentialsProvider,
