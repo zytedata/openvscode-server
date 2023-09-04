@@ -277,6 +277,7 @@ const excludedExtensions = [
 	'ms-vscode.node-debug',
 	'ms-vscode.node-debug2',
 	'github-authentication',
+	'tunnel-forwarding'
 ];
 
 const marketplaceWebExtensionsExclude = new Set([
