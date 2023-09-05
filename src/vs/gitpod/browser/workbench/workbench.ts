@@ -24,9 +24,11 @@ import * as vscode from 'vs/workbench/workbench.web.main';
 import { posix } from 'vs/base/common/path';
 import { ltrim } from 'vs/base/common/strings';
 import type { ICredentialsProvider } from 'vs/platform/credentials/common/credentials';
+import type { ISecretStorageProvider } from 'vs/platform/secrets/common/secrets';
 import type { IURLCallbackProvider } from 'vs/workbench/services/url/browser/urlService';
 import type { ICommand, ITunnel, ITunnelProvider, IWorkbenchConstructionOptions } from 'vs/workbench/browser/web.api';
 import type { IWorkspace, IWorkspaceProvider } from 'vs/workbench/services/host/browser/browserHostService';
+import type { AuthenticationSessionInfo } from 'vs/workbench/services/authentication/browser/authenticationService';
 import { defaultWebSocketFactory } from 'vs/platform/remote/browser/browserSocketFactory';
 import { RemoteAuthorityResolverError, RemoteAuthorityResolverErrorCode } from 'vs/platform/remote/common/remoteAuthorityResolver';
 import { extractLocalHostUriMetaDataForPortMapping, isLocalhost, TunnelPrivacyId } from 'vs/platform/tunnel/common/tunnel';
@@ -203,6 +205,94 @@ class LocalStorageCredentialsProvider implements ICredentialsProvider {
 
 	async clear(): Promise<void> {
 		window.localStorage.removeItem(LocalStorageCredentialsProvider.CREDENTIALS_STORAGE_KEY);
+	}
+}
+
+export class LocalStorageSecretStorageProvider implements ISecretStorageProvider {
+	private readonly _storageKey = 'secrets.provider';
+
+	private _secretsPromise: Promise<Record<string, string>> = this.load();
+
+	type: 'in-memory' | 'persisted' | 'unknown' = 'persisted';
+
+	constructor() { }
+
+	private async load(): Promise<Record<string, string>> {
+		const record = this.loadAuthSessionFromElement();
+		// Get the secrets from localStorage
+		const encrypted = window.localStorage.getItem(this._storageKey);
+		if (encrypted) {
+			try {
+				const decrypted = JSON.parse(window.gitpod.decrypt(encrypted));
+				return { ...record, ...decrypted };
+			} catch (err) {
+				console.error('Failed to decrypt secrets from localStorage', err);
+				window.localStorage.removeItem(this._storageKey);
+			}
+		}
+
+		return record;
+	}
+
+	private loadAuthSessionFromElement(): Record<string, string> {
+		let authSessionInfo: (AuthenticationSessionInfo & { scopes: string[][] }) | undefined;
+		const authSessionElement = document.getElementById('vscode-workbench-auth-session');
+		const authSessionElementAttribute = authSessionElement ? authSessionElement.getAttribute('data-settings') : undefined;
+		if (authSessionElementAttribute) {
+			try {
+				authSessionInfo = JSON.parse(authSessionElementAttribute);
+			} catch (error) { /* Invalid session is passed. Ignore. */ }
+		}
+
+		if (!authSessionInfo) {
+			return {};
+		}
+
+		const record: Record<string, string> = {};
+
+		// Settings Sync Entry
+		record[`${product.urlProtocol}.loginAccount`] = JSON.stringify(authSessionInfo);
+
+		// Auth extension Entry
+		if (authSessionInfo.providerId !== 'github') {
+			console.error(`Unexpected auth provider: ${authSessionInfo.providerId}. Expected 'github'.`);
+			return record;
+		}
+
+		const authAccount = JSON.stringify({ extensionId: 'vscode.github-authentication', key: 'github.auth' });
+		record[authAccount] = JSON.stringify(authSessionInfo.scopes.map(scopes => ({
+			id: authSessionInfo!.id,
+			scopes,
+			accessToken: authSessionInfo!.accessToken
+		})));
+
+		return record;
+	}
+
+	async get(key: string): Promise<string | undefined> {
+		const secrets = await this._secretsPromise;
+		return secrets[key];
+	}
+	async set(key: string, value: string): Promise<void> {
+		const secrets = await this._secretsPromise;
+		secrets[key] = value;
+		this._secretsPromise = Promise.resolve(secrets);
+		this.save();
+	}
+	async delete(key: string): Promise<void> {
+		const secrets = await this._secretsPromise;
+		delete secrets[key];
+		this._secretsPromise = Promise.resolve(secrets);
+		this.save();
+	}
+
+	private async save(): Promise<void> {
+		try {
+			const encrypted = window.gitpod.encrypt(JSON.stringify(await this._secretsPromise));
+			window.localStorage.setItem(this._storageKey, encrypted);
+		} catch (err) {
+			console.error(err);
+		}
 	}
 }
 
@@ -619,6 +709,7 @@ async function doStart(): Promise<IDisposable> {
 	const syncStoreURL = info.gitpodHost + '/code-sync';
 
 	const credentialsProvider = new LocalStorageCredentialsProvider();
+	const secretStorageProvider = new LocalStorageSecretStorageProvider();
 	interface GetTokenResponse {
 		token: string;
 		user?: string;
@@ -653,8 +744,15 @@ async function doStart(): Promise<IDisposable> {
 		};
 		// Settings Sync Entry
 		await credentialsProvider.setPassword(`${product.urlProtocol}.login`, 'account', JSON.stringify(currentSession));
+		await secretStorageProvider.set(`${product.urlProtocol}.loginAccount`, JSON.stringify(currentSession));
 		// Auth extension Entry
 		await credentialsProvider.setPassword(`${product.urlProtocol}-gitpod.login`, 'account', JSON.stringify([{
+			id: currentSession.id,
+			scopes: getToken.scope || scopes,
+			accessToken: currentSession.accessToken
+		}]));
+		const authAccount = JSON.stringify({ extensionId: 'gitpod.gitpod-web', key: 'gitpod.auth' });
+		await secretStorageProvider.set(authAccount, JSON.stringify([{
 			id: currentSession.id,
 			scopes: getToken.scope || scopes,
 			accessToken: currentSession.accessToken
@@ -1013,6 +1111,7 @@ async function doStart(): Promise<IDisposable> {
 		},
 		urlCallbackProvider: new LocalStorageURLCallbackProvider('/vscode-extension-auth-callback'),
 		credentialsProvider,
+		secretStorageProvider,
 		productConfiguration: {
 			linkProtectionTrustedDomains: [
 				...(product.linkProtectionTrustedDomains || []),
