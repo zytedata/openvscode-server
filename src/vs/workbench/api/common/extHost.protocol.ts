@@ -89,6 +89,11 @@ export interface MainThreadClipboardShape extends IDisposable {
 	$writeText(value: string): Promise<void>;
 }
 
+export interface MainThreadMainUrlShape extends IDisposable {
+	$url(): Promise<string>;
+	$setFragment(fragment: string): Promise<boolean>;
+}
+
 export interface MainThreadCommandsShape extends IDisposable {
 	$registerCommand(id: string): void;
 	$unregisterCommand(id: string): void;
@@ -2264,6 +2269,7 @@ export const MainContext = {
 	MainThreadAuthentication: createProxyIdentifier<MainThreadAuthenticationShape>('MainThreadAuthentication'),
 	MainThreadBulkEdits: createProxyIdentifier<MainThreadBulkEditsShape>('MainThreadBulkEdits'),
 	MainThreadClipboard: createProxyIdentifier<MainThreadClipboardShape>('MainThreadClipboard'),
+	MainThreadMainUrl: createProxyIdentifier<MainThreadMainUrlShape>('MainThreadMainUrl'),
 	MainThreadCommands: createProxyIdentifier<MainThreadCommandsShape>('MainThreadCommands'),
 	MainThreadComments: createProxyIdentifier<MainThreadCommentsShape>('MainThreadComments'),
 	MainThreadConfiguration: createProxyIdentifier<MainThreadConfigurationShape>('MainThreadConfiguration'),

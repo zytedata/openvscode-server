@@ -41,6 +41,7 @@ import './mainThreadKeytar';
 import './mainThreadLanguageFeatures';
 import './mainThreadLanguages';
 import './mainThreadLogService';
+import './mainThreadMainUrl';
 import './mainThreadMessageService';
 import './mainThreadOutputService';
 import './mainThreadProgress';

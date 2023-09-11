@@ -17,6 +17,7 @@ import { ExtHostContext, MainContext, CandidatePortSource, ExtHostLogLevelServic
 import { UIKind } from 'vs/workbench/services/extensions/common/extensionHostProtocol';
 import { ExtHostApiCommands } from 'vs/workbench/api/common/extHostApiCommands';
 import { ExtHostClipboard } from 'vs/workbench/api/common/extHostClipboard';
+import { ExtHostMainUrl } from 'vs/workbench/api/common/extHostMainUrl';
 import { IExtHostCommands } from 'vs/workbench/api/common/extHostCommands';
 import { createExtHostComments } from 'vs/workbench/api/common/extHostComments';
 import { ExtHostConfigProvider, IExtHostConfiguration } from 'vs/workbench/api/common/extHostConfiguration';
@@ -192,6 +193,7 @@ export function createApiFactoryAndRegisterActors(accessor: ServicesAccessor): I
 	// Other instances
 	const extHostBulkEdits = new ExtHostBulkEdits(rpcProtocol, extHostDocumentsAndEditors);
 	const extHostClipboard = new ExtHostClipboard(rpcProtocol);
+	const extHostMainUrl = new ExtHostMainUrl(rpcProtocol);
 	const extHostMessageService = new ExtHostMessageService(rpcProtocol, extHostLogService);
 	const extHostDialogs = new ExtHostDialogs(rpcProtocol);
 	const extHostStatusBar = new ExtHostStatusBar(rpcProtocol, extHostCommands.converter);
@@ -305,6 +307,7 @@ export function createApiFactoryAndRegisterActors(accessor: ServicesAccessor): I
 			get appHost() { return initData.environment.appHost; },
 			get uriScheme() { return initData.environment.appUriScheme; },
 			get clipboard(): vscode.Clipboard { return extHostClipboard.value; },
+			get mainUrl(): vscode.MainUrl { return extHostMainUrl.value; },
 			get shell() {
 				return extHostTerminalService.getDefaultShell(false);
 			},
