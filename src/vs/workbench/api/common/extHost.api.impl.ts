@@ -37,6 +37,7 @@ import { ExtHostBulkEdits } from './extHostBulkEdits.js';
 import { ExtHostChatAgents2 } from './extHostChatAgents2.js';
 import { ExtHostChatStatus } from './extHostChatStatus.js';
 import { ExtHostClipboard } from './extHostClipboard.js';
+import { ExtHostMainUrl } from './extHostMainUrl.js';
 import { ExtHostEditorInsets } from './extHostCodeInsets.js';
 import { ExtHostCodeMapper } from './extHostCodeMapper.js';
 import { IExtHostCommands } from './extHostCommands.js';
@@ -242,6 +243,7 @@ export function createApiFactoryAndRegisterActors(accessor: ServicesAccessor): I
 	// Other instances
 	const extHostBulkEdits = new ExtHostBulkEdits(rpcProtocol, extHostDocumentsAndEditors);
 	const extHostClipboard = new ExtHostClipboard(rpcProtocol);
+	const extHostMainUrl = new ExtHostMainUrl(rpcProtocol);
 	const extHostMessageService = new ExtHostMessageService(rpcProtocol, extHostLogService);
 	const extHostDialogs = new ExtHostDialogs(rpcProtocol);
 	const extHostChatStatus = new ExtHostChatStatus(rpcProtocol);
@@ -392,6 +394,7 @@ export function createApiFactoryAndRegisterActors(accessor: ServicesAccessor): I
 			get appHost() { return initData.environment.appHost; },
 			get uriScheme() { return initData.environment.appUriScheme; },
 			get clipboard(): vscode.Clipboard { return extHostClipboard.value; },
+			get mainUrl(): vscode.MainUrl { return extHostMainUrl.value; },
 			get shell() {
 				return extHostTerminalService.getDefaultShell(false);
 			},

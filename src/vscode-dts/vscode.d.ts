@@ -10611,6 +10611,10 @@ declare module 'vscode' {
 		backupCustomDocument(document: T, context: CustomDocumentBackupContext, cancellation: CancellationToken): Thenable<CustomDocumentBackup>;
 	}
 
+	export interface MainUrl {
+		url(): Thenable<string>;
+	}
+
 	/**
 	 * The clipboard provides read and write access to the system's clipboard.
 	 */
@@ -10721,6 +10725,8 @@ declare module 'vscode' {
 		 * The system clipboard.
 		 */
 		export const clipboard: Clipboard;
+
+		export const mainUrl: MainUrl;
 
 		/**
 		 * A unique identifier for the computer.
