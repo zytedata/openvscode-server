@@ -28,6 +28,7 @@ import { isString, Mutable } from '../../base/common/types.js';
 import { CharCode } from '../../base/common/charCode.js';
 import { IExtensionManifest } from '../../platform/extensions/common/extensions.js';
 import { ICSSDevelopmentService } from '../../platform/cssDev/node/cssDevService.js';
+import { getUrlPathPrefix } from '../../platform/remote/common/remoteHosts.js';
 
 const textMimeType: { [ext: string]: string | undefined } = {
 	'.html': 'text/html',
@@ -125,7 +126,7 @@ export class WebClientServer {
 			if (pathname.startsWith(STATIC_PATH) && pathname.charCodeAt(STATIC_PATH.length) === CharCode.Slash) {
 				return this._handleStatic(req, res, pathname.substring(STATIC_PATH.length));
 			}
-			if (pathname === '/') {
+			if (pathname === getUrlPathPrefix() || pathname === getUrlPathPrefix() + '/') {
 				return this._handleRoot(req, res, parsedUrl);
 			}
 			if (pathname === CALLBACK_PATH) {

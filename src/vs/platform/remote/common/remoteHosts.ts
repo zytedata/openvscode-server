@@ -6,6 +6,20 @@
 import { Schemas } from '../../../base/common/network.js';
 import { URI } from '../../../base/common/uri.js';
 
+export function getUrlPathPrefix(): string {
+	try {
+		return `/o/${process.env.ORGANIZATION_ID}`;
+	} catch (e) {
+		// fallback for frontend calls
+		const m = window.location.pathname.match('/o/[0-9]+');
+		if (m) {
+			return m[0];
+		}
+		console.error('can not detect organization ID');
+		return '';
+	}
+}
+
 export function getRemoteAuthority(uri: URI): string | undefined {
 	return uri.scheme === Schemas.vscodeRemote ? uri.authority : undefined;
 }
@@ -62,4 +76,13 @@ function parseAuthority(authority: string): { host: string; port: number | undef
 
 	// doesn't contain a port
 	return { host: authority, port: undefined };
+}
+
+/**
+ * The root path to use when accessing the remote server. The path contains the quality and commit of the current build.
+ * @param product
+ * @returns
+ */
+export function getRemoteServerRootPath(product: { quality?: string; commit?: string }): string {
+	return `${getUrlPathPrefix()}/${product.quality ?? 'oss'}-${product.commit ?? 'dev'}`;
 }
