@@ -27,7 +27,7 @@ import { streamToBuffer } from 'vs/base/common/buffer';
 import { IProductConfiguration } from 'vs/base/common/product';
 import { isString } from 'vs/base/common/types';
 import { CharCode } from 'vs/base/common/charCode';
-import { getRemoteServerRootPath } from 'vs/platform/remote/common/remoteHosts';
+import { getRemoteServerRootPath, getUrlPathPrefix } from 'vs/platform/remote/common/remoteHosts';
 
 const textMimeType = {
 	'.html': 'text/html',
@@ -126,7 +126,7 @@ export class WebClientServer {
 			if (pathname.startsWith(this._staticRoute) && pathname.charCodeAt(this._staticRoute.length) === CharCode.Slash) {
 				return this._handleStatic(req, res, parsedUrl);
 			}
-			if (pathname === '/') {
+			if (pathname === getUrlPathPrefix() || pathname === getUrlPathPrefix() + '/') {
 				return this._handleRoot(req, res, parsedUrl);
 			}
 			if (pathname === this._callbackRoute) {

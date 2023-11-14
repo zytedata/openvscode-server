@@ -6,6 +6,20 @@
 import { Schemas } from 'vs/base/common/network';
 import { URI } from 'vs/base/common/uri';
 
+export function getUrlPathPrefix(): string {
+	try {
+		return `/o/${process.env.ORGANIZATION_ID}`;
+	} catch (e) {
+		// fallback for frontend calls
+		const m = window.location.pathname.match('/o/[0-9]+');
+		if (m) {
+			return m[0];
+		}
+		console.error('can not detect organization ID');
+		return '';
+	}
+}
+
 export function getRemoteAuthority(uri: URI): string | undefined {
 	return uri.scheme === Schemas.vscodeRemote ? uri.authority : undefined;
 }
@@ -31,5 +45,5 @@ export function getRemoteName(authority: string | undefined): string | undefined
  * @returns
  */
 export function getRemoteServerRootPath(product: { quality?: string; commit?: string }): string {
-	return `/${product.quality ?? 'oss'}-${product.commit ?? 'dev'}`;
+	return `${getUrlPathPrefix()}/${product.quality ?? 'oss'}-${product.commit ?? 'dev'}`;
 }
