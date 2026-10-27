@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from 'vs/base/common/lifecycle';
-import { IMainUrlService } from 'vs/platform/mainUrl/common/mainUrlService';
+import { Disposable } from '../../../base/common/lifecycle.js';
+import { IMainUrlService } from '../common/mainUrlService.js';
 
 export class BrowserMainUrlService extends Disposable implements IMainUrlService {
 

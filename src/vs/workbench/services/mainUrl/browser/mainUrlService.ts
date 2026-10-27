@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
-import { IMainUrlService } from 'vs/platform/mainUrl/common/mainUrlService';
-import { BrowserMainUrlService as BaseBrowserMainUrlService } from 'vs/platform/mainUrl/browser/mainUrlService';
+import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
+import { IMainUrlService } from '../../../../platform/mainUrl/common/mainUrlService.js';
+import { BrowserMainUrlService as BaseBrowserMainUrlService } from '../../../../platform/mainUrl/browser/mainUrlService.js';
 
 export class BrowserMainUrlService extends BaseBrowserMainUrlService { }
 
-registerSingleton(IMainUrlService, BrowserMainUrlService, true);
+registerSingleton(IMainUrlService, BrowserMainUrlService, InstantiationType.Delayed);
