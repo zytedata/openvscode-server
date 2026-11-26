@@ -36,7 +36,7 @@
   "dependencies": {
     "@vscode/extension-telemetry": "0.4.10",
     "jsonc-parser": "^2.2.1",
-    "semver": "5.5.1",
+    "semver": "5.7.2",
     "vscode-nls": "^5.0.0",
     "vscode-uri": "^3.0.3"
   },
